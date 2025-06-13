@@ -1,0 +1,18 @@
+syntax = "proto3";
+package tutorial;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ttn-nguyen42/sidecar/proto";
+
+service HelperService {
+    rpc Ping(PingRequest) returns (PingResponse);
+}
+
+message PingRequest {
+
+}
+
+message PingResponse {
+    google.protobuf.Timestamp timestamp = 1;
+}

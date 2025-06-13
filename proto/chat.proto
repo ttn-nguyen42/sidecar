@@ -1,0 +1,20 @@
+syntax = "proto3";
+package tutorial;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ttn-nguyen42/sidecar/proto";
+
+service ChatService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}
+
+message SendMessageRequest {
+  google.protobuf.Timestamp timestamp = 1;
+  string message = 2;
+}
+
+message SendMessageResponse {
+  google.protobuf.Timestamp timestamp = 1;
+  string message = 2;
+}

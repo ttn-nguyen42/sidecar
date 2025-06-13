@@ -16,6 +16,31 @@ get_go_version() {
     fi
 }
 
+# Function to add GOPATH/bin to PATH if not present
+add_gopath_to_path() {
+    # Get GOPATH
+    if ! command_exists go; then
+        echo "Go is not installed. Cannot determine GOPATH."
+        return
+    fi
+
+    # Get GOPATH using 'go env'
+    GOPATH=$(go env GOPATH)
+    GOPATH_BIN="$GOPATH/bin"
+
+    # Check if GOPATH/bin is already in PATH
+    if [[ ":$PATH:" != *":$GOPATH_BIN:"* ]]; then
+        echo "Adding $GOPATH_BIN to PATH..."
+        # Add to both current session and .bashrc
+        export PATH="$PATH:$GOPATH_BIN"
+        if ! grep -q "export PATH.*$GOPATH_BIN" ~/.bashrc; then
+            echo "export PATH=\"\$PATH:$GOPATH_BIN\"" >> ~/.bashrc
+        fi
+    else
+        echo "$GOPATH_BIN is already in PATH"
+    fi
+}
+
 # Function to install Go on macOS
 install_go_macos() {
     if command_exists brew; then
@@ -72,6 +97,9 @@ else
     CURRENT_VERSION=$(get_go_version)
     echo "Go is already installed (version $CURRENT_VERSION)"
 fi
+
+# Add GOPATH/bin to PATH
+add_gopath_to_path
 
 # Verify installation
 echo "Verifying Go installation..."
