@@ -7,15 +7,18 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
+var logger = zap.L()
+
 type Config struct {
-	Port *Port `mapstructure:"port"`
+	Port *Port `mapstructure:"port" json:"port"`
 }
 
 type Port struct {
-	Helper int `mapstructure:"helper"`
-	Voice  int `mapstructure:"voice"`
+	Helper int `mapstructure:"helper" json:"helper"`
+	Voice  int `mapstructure:"voice" json:"voice"`
 }
 
 // NewDefault creates a new config with default values
@@ -77,11 +80,14 @@ func setupViper() *viper.Viper {
 
 func loadConfigFile(v *viper.Viper, path string, o *Options) error {
 	if len(path) == 0 {
+		logger.Info("not provided config file, skipping")
 		return nil
 	}
 
 	v.SetConfigFile(path)
 	v.SetConfigType("json")
+
+	logger.Info("provided config file", zap.String("path", path))
 
 	if err := v.ReadInConfig(); err != nil {
 		var notFoundErr viper.ConfigFileNotFoundError
@@ -104,19 +110,21 @@ func unmarshalConfig(v *viper.Viper) (*Config, error) {
 }
 
 func setupConfigWatch(v *viper.Viper, handler OnChangeHandler) {
-	v.OnConfigChange(func(e fsnotify.Event) {
-		var config Config
-		if err := v.Unmarshal(&config); err != nil {
-			return
-		}
+	if handler != nil {
+		v.OnConfigChange(func(e fsnotify.Event) {
+			var config Config
+			if err := v.Unmarshal(&config); err != nil {
+				return
+			}
 
-		if err := validate(&config); err != nil {
-			return
-		}
+			if err := validate(&config); err != nil {
+				return
+			}
 
-		handler(&config)
-	})
-	v.WatchConfig()
+			handler(&config)
+		})
+		v.WatchConfig()
+	}
 }
 
 func validate(c *Config) error {

@@ -3,34 +3,42 @@ package service
 import (
 	"context"
 	"flag"
-	"log/slog"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/ttn-nguyen42/sidecar/helper/pkg/api"
 	"github.com/ttn-nguyen42/sidecar/helper/pkg/config"
 )
 
 func Run() error {
-	configPath := flag.String("config", "config.json", "Path to config file")
-	flag.Parse()
-
+	configPath := flag.String("config", "", "Path to config file")
 	level := flag.String("level", "info", "Log level (debug, info, warn, error)")
 	flag.Parse()
 
-	logger := initLogger(*level)
-	slog.SetDefault(logger)
+	logger, err := initZapLogger(*level)
+	if err != nil {
+		return fmt.Errorf("failed to init logger: %w", err)
+	}
+	defer logger.Sync()
 
-	slog.Info("logger level", slog.String("level", *level))
+	zap.ReplaceGlobals(logger)
+
+	logger.Info("logger level", zap.String("level", *level))
 
 	cfg, err := config.NewSource(*configPath)
 	if err != nil {
+		logger.Error("failed to load config", zap.Error(err))
 		return err
 	}
 
-	api, err := api.NewServer(cfg)
+	apiServer, err := api.NewServer(cfg)
 	if err != nil {
+		logger.Error("failed to create api server", zap.Error(err))
 		return err
 	}
 
@@ -38,20 +46,49 @@ func Run() error {
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		slog.Debug("starting api servers")
-		if err := api.Run(); err != nil {
-			slog.Error("api server run failure", slog.String("err", err.Error()))
+		logger.Info("starting api servers", zap.Any("ports", cfg.Port))
+		if err := apiServer.Run(); err != nil {
+			logger.Error("api server run failure", zap.Error(err))
 		}
 	}()
 
 	<-signalCh
 
-	slog.Debug("api servers stopping")
-	if err := api.Shutdown(context.Background()); err != nil {
+	logger.Info("api servers stopping")
+	if err := apiServer.Shutdown(context.Background()); err != nil {
+		logger.Error("api server shutdown failure", zap.Error(err))
 		return err
 	}
 
-	slog.Debug("api servers shutdowns")
+	logger.Debug("api servers shutdown")
 
 	return nil
+}
+
+func initZapLogger(level string) (*zap.Logger, error) {
+	var zapLevel zapcore.Level
+	switch level {
+	case "debug":
+		zapLevel = zapcore.DebugLevel
+	case "info":
+		zapLevel = zapcore.InfoLevel
+	case "warn":
+		zapLevel = zapcore.WarnLevel
+	case "error":
+		zapLevel = zapcore.ErrorLevel
+	default:
+		zapLevel = zapcore.InfoLevel
+	}
+
+	cfg := zap.NewProductionConfig()
+	cfg.Level = zap.NewAtomicLevelAt(zapLevel)
+	cfg.EncoderConfig.TimeKey = "time"
+	cfg.Encoding = "console"
+	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, err
+	}
+	return logger, nil
 }
