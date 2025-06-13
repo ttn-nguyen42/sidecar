@@ -48,7 +48,7 @@ func Run() error {
 		logger.Error("failed to initialize provider", zap.Error(err))
 		return err
 	}
-	_ = prov
+	defer prov.Close()
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)

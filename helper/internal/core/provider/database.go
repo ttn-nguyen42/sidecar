@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
+	"go.uber.org/zap"
 )
 
 type DbProvider interface {
@@ -20,24 +21,26 @@ func (p *Provider) GetDb() *sql.DB {
 }
 
 func (p *Provider) loadDb() error {
-	_, err := enforceFileExist(p.c.SqlitePath)
+	_, err := enforceFileExist(p.c.Database.SqlitePath)
 	if err != nil {
 		return err
 	}
 
-	abs, err := filepath.Abs(p.c.SqlitePath)
+	abs, err := filepath.Abs(p.c.Database.SqlitePath)
 	if err != nil {
 		return err
 	}
 
-	queryStr := fmt.Sprintf("file:%s?cache=shared&_journal=WAL", abs)
+	connStr := fmt.Sprintf("file:%s?cache=shared&_journal=WAL", abs)
 
-	db, err := sql.Open("sqlite3", queryStr)
+	db, err := sql.Open("sqlite3", connStr)
 	if err != nil {
 		return err
 	}
 
 	p.sqlite = db
+
+	logger.Info("loaded SQlite", zap.String("connStr", connStr))
 
 	return nil
 }

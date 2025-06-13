@@ -13,9 +13,9 @@ import (
 var logger = zap.L()
 
 type Config struct {
-	Port  *Port  `mapstructure:"port" json:"port"`
-	Model *Model `mapstructure:"model" json:"model"`
-	Database
+	Port     *Port     `mapstructure:"port" json:"port"`
+	Model    *Model    `mapstructure:"model" json:"model"`
+	Database *Database `mapstructure:"database" json:"database"`
 }
 
 type Port struct {
@@ -59,8 +59,12 @@ func newDefault() *Config {
 			Chat:       "gpt-4.1-nano-2025-04-14",
 			Instruct:   "gpt-4.1-nano-2025-04-14",
 			Embedding:  "text-embedding-3-small",
-			Transcribe: "base-q8_0",
+			Transcribe: "ggml-base.en.bin",
 			LocalPath:  "MODELS",
+		},
+		Database: &Database{
+			SqlitePath: "MANIFEST/sqlite.db",
+			VectorPath: "MANIFEST",
 		},
 	}
 }

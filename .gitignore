@@ -270,4 +270,7 @@ dist
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,intellij+all,node,dotenv
+### Sidecar ###
+MODEL/
+build/
+whisper.cpp/

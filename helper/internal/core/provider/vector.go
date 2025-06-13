@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/philippgille/chromem-go"
+	"go.uber.org/zap"
 )
 
 type VectorProvider interface {
@@ -18,16 +19,18 @@ func (p *Provider) GetVector() *chromem.DB {
 }
 
 func (p *Provider) loadVector() error {
-	_, err := enforceDirExist(p.c.VectorPath)
+	_, err := enforceDirExist(p.c.Database.VectorPath)
 	if err != nil {
 		return err
 	}
 
-	db, err := chromem.NewPersistentDB(p.c.VectorPath, true)
+	db, err := chromem.NewPersistentDB(p.c.Database.SqlitePath, true)
 	if err != nil {
 		return fmt.Errorf("failed to initialized persistent vector db: %w", err)
 	}
 	p.vector = db
+
+	logger.Info("loaded vector db", zap.String("path", p.c.Database.VectorPath))
 
 	return nil
 }

@@ -5,16 +5,16 @@ import (
 	"os"
 	"path/filepath"
 
-	whisper "github.com/ggerganov/whisper.cpp/bindings/go"
+	"github.com/ggerganov/whisper.cpp/bindings/go/pkg/whisper"
 	"github.com/ttn-nguyen42/sidecar/helper/pkg/config"
 	"go.uber.org/zap"
 )
 
 type TranscriberProvider interface {
-	GetTranscriber() *whisper.Context
+	GetTranscriber() whisper.Model
 }
 
-func (p *Provider) GetTranscriber() *whisper.Context {
+func (p *Provider) GetTranscriber() whisper.Model {
 	return p.whisper
 }
 
@@ -24,10 +24,13 @@ func (p *Provider) loadTranscriber() error {
 		return fmt.Errorf("local whisper.cpp model does not exist")
 	}
 
-	p.whisper = whisper.Whisper_init(path)
-	if p.whisper == nil {
+	var err error
+	p.whisper, err = whisper.New(path)
+	if err != nil {
 		return fmt.Errorf("failed to load whisper.cpp model")
 	}
+
+	logger.Info("loaded whisper.cpp transcriber", zap.String("path", path))
 
 	return nil
 }

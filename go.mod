@@ -2,6 +2,8 @@ module github.com/ttn-nguyen42/sidecar
 
 go 1.24.2
 
+replace github.com/ggerganov/whisper.cpp/bindings/go => ./whisper.cpp/bindings/go
+
 require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/fsnotify/fsnotify v1.8.0
