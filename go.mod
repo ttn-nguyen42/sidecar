@@ -3,15 +3,19 @@ module github.com/ttn-nguyen42/sidecar
 go 1.24.2
 
 require (
+	github.com/fsnotify/fsnotify v1.8.0
 	github.com/spf13/viper v1.20.1
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.67.3
 	google.golang.org/protobuf v1.36.1
 )
 
 require (
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect
