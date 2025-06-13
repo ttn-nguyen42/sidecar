@@ -13,12 +13,34 @@ import (
 var logger = zap.L()
 
 type Config struct {
-	Port *Port `mapstructure:"port" json:"port"`
+	Port  *Port  `mapstructure:"port" json:"port"`
+	Model *Model `mapstructure:"model" json:"model"`
+	Database
 }
 
 type Port struct {
 	Helper int `mapstructure:"helper" json:"helper"`
 	Voice  int `mapstructure:"voice" json:"voice"`
+}
+
+type Model struct {
+	Token      string `mapstructure:"token" json:"-"`
+	Chat       string `mapstructure:"chat" json:"chat"`
+	Instruct   string `mapstructure:"instruct" json:"instruct"`
+	Embedding  string `mapstructure:"embedding" json:"embedding"`
+	Transcribe string `mapstructure:"transcribe" json:"transcribe"`
+
+	// LocalPath is where local models are downloaded.
+	// Whisper.cpp model for spech transcription should be pre-downloaded here
+	LocalPath string `mapstructure:"localPath" json:"localPath"`
+}
+
+type Database struct {
+	// SqlitePath specifies where to store the SQLite database file
+	SqlitePath string `mapstructure:"sqlitePath" json:"sqlitePath"`
+
+	// VectorPath specifies where vector DB stores its files. It is a directory
+	VectorPath string `mapstructure:"vectorPath" json:"vectorPath"`
 }
 
 // NewDefault creates a new config with default values
@@ -32,12 +54,21 @@ func newDefault() *Config {
 			Helper: 8767,
 			Voice:  8768,
 		},
+		Model: &Model{
+			Token:      "",
+			Chat:       "gpt-4.1-nano-2025-04-14",
+			Instruct:   "gpt-4.1-nano-2025-04-14",
+			Embedding:  "text-embedding-3-small",
+			Transcribe: "base-q8_0",
+			LocalPath:  "MODELS",
+		},
 	}
 }
 
 func setDefaults(v *viper.Viper, d *Config) {
 	v.SetDefault("port.helper", d.Port.Helper)
 	v.SetDefault("port.voice", d.Port.Voice)
+	v.SetDefault("model.token", d.Model.Token)
 }
 
 // NewSource creates a config by reading from environment variables and config file
@@ -74,7 +105,7 @@ func setupViper() *viper.Viper {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 	v.AllowEmptyEnv(true)
-
+	v.BindEnv("model.token", "OPENAI_API_KEY")
 	return v
 }
 
@@ -142,6 +173,10 @@ func validate(c *Config) error {
 
 	if c.Port.Helper == c.Port.Voice {
 		return fmt.Errorf("helper and voice ports cannot be the same: %d", c.Port.Helper)
+	}
+
+	if len(c.Model.Token) == 0 {
+		return fmt.Errorf("missing API token")
 	}
 
 	return nil

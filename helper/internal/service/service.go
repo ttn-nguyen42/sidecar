@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/ttn-nguyen42/sidecar/helper/internal/core/provider"
 	"github.com/ttn-nguyen42/sidecar/helper/pkg/api"
 	"github.com/ttn-nguyen42/sidecar/helper/pkg/config"
 )
@@ -41,6 +42,13 @@ func Run() error {
 		logger.Error("failed to create api server", zap.Error(err))
 		return err
 	}
+
+	prov, err := initProvider(cfg)
+	if err != nil {
+		logger.Error("failed to initialize provider", zap.Error(err))
+		return err
+	}
+	_ = prov
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
@@ -91,4 +99,14 @@ func initZapLogger(level string) (*zap.Logger, error) {
 		return nil, err
 	}
 	return logger, nil
+}
+
+func initProvider(c *config.Config) (*provider.Provider, error) {
+	p := provider.NewProvider(c)
+
+	if err := p.Load(); err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
