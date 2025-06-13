@@ -51,18 +51,15 @@ else
     echo "protoc version $PROTOC_VERSION is already installed"
 fi
 
-# Install Go plugins for protoc
-echo "Installing/Updating Go plugins..."
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
 # Install Node.js plugins for protoc
 echo "Installing/Updating Node.js plugins..."
 npm install -g grpc-tools
 
+# Install Python plugins for protoc
+echo "Installing/Updating Python plugins..."
+pip3 install --upgrade grpcio grpcio-tools
+
 # Verify installations
 echo "Verifying installations..."
 protoc --version
-which protoc-gen-go
-which protoc-gen-go-grpc
 which grpc_tools_node_protoc

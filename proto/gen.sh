@@ -7,7 +7,7 @@
 set -e # Exit on error
 
 # Get the root directory of the project
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(pwd)"
 
 # Create output directories if they don't exist
 mkdir -p "$ROOT_DIR/helper/proto"
@@ -15,13 +15,12 @@ mkdir -p "$ROOT_DIR/app/proto"
 
 echo "Generating protobuf code..."
 
-# Generate Go server code
-echo "Generating Go server code..."
-protoc \
-    --go_out="$ROOT_DIR/helper/proto" \
-    --go_opt=paths=source_relative \
-    --go-grpc_out="$ROOT_DIR/helper/proto" \
-    --go-grpc_opt=paths=source_relative \
+# Generate Python server/client code
+echo "Generating Python code..."
+python_out_dir="$ROOT_DIR/helper/proto"
+python -m grpc_tools.protoc \
+    --python_out="$python_out_dir" \
+    --grpc_python_out="$python_out_dir" \
     -I="$ROOT_DIR/proto" \
     "$ROOT_DIR/proto"/*.proto
 
@@ -34,5 +33,5 @@ grpc_tools_node_protoc \
     "$ROOT_DIR/proto"/*.proto
 
 echo "Protobuf code generation complete!"
-echo "Go server code generated in: $ROOT_DIR/helper/proto"
+echo "Python code generated in: $ROOT_DIR/helper/proto"
 echo "Node.js client code generated in: $ROOT_DIR/app/proto"
