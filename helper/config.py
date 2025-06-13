@@ -20,6 +20,7 @@ def get_default(parser: configparser.ConfigParser):
     parser['api.grpc'] = {'port': '8768'}
     parser['api.ws'] = {'port': '8778'}
     parser['model'] = {
+        'token': os.getenv(key='OPENAI_API_KEY', default=''),
         'chat': '',  # Model name
         'instruct': '',  # Model name
         'transcribe': '',  # Path

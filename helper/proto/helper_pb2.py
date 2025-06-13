@@ -25,14 +25,13 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0chelper.proto\x12\x08tutorial\x1a\x1fgoogle/protobuf/timestamp.proto\"\r\n\x0bPingRequest\"=\n\x0cPingResponse\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp2F\n\rHelperService\x12\x35\n\x04Ping\x12\x15.tutorial.PingRequest\x1a\x16.tutorial.PingResponseB\'Z%github.com/ttn-nguyen42/sidecar/protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0chelper.proto\x12\x08tutorial\x1a\x1fgoogle/protobuf/timestamp.proto\"\r\n\x0bPingRequest\"=\n\x0cPingResponse\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp2F\n\rHelperService\x12\x35\n\x04Ping\x12\x15.tutorial.PingRequest\x1a\x16.tutorial.PingResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'helper_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z%github.com/ttn-nguyen42/sidecar/proto'
+  DESCRIPTOR._loaded_options = None
   _globals['_PINGREQUEST']._serialized_start=59
   _globals['_PINGREQUEST']._serialized_end=72
   _globals['_PINGRESPONSE']._serialized_start=74

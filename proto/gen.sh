@@ -18,9 +18,17 @@ echo "Generating protobuf code..."
 # Generate Python server/client code
 echo "Generating Python code..."
 python_out_dir="$ROOT_DIR/helper/proto"
+
+# Ensure __init__.py exists for package imports
+init_file="$python_out_dir/__init__.py"
+if [ ! -f "$init_file" ]; then
+    touch "$init_file"
+fi
+
 python -m grpc_tools.protoc \
     --python_out="$python_out_dir" \
     --grpc_python_out="$python_out_dir" \
+    --pyi_out="$python_out_dir" \
     -I="$ROOT_DIR/proto" \
     "$ROOT_DIR/proto"/*.proto
 
@@ -35,3 +43,6 @@ grpc_tools_node_protoc \
 echo "Protobuf code generation complete!"
 echo "Python code generated in: $ROOT_DIR/helper/proto"
 echo "Node.js client code generated in: $ROOT_DIR/app/proto"
+
+# Fix imports in generated Python files
+cd "$ROOT_DIR/helper/proto" && sed -i '' 's/^\(import.*pb2\)/from . \1/g' *.py

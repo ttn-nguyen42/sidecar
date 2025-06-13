@@ -25,14 +25,13 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nchat.proto\x12\x08tutorial\x1a\x1fgoogle/protobuf/timestamp.proto\"T\n\x12SendMessageRequest\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0f\n\x07message\x18\x02 \x01(\t\"U\n\x13SendMessageResponse\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0f\n\x07message\x18\x02 \x01(\t2Y\n\x0b\x43hatService\x12J\n\x0bSendMessage\x12\x1c.tutorial.SendMessageRequest\x1a\x1d.tutorial.SendMessageResponseB\'Z%github.com/ttn-nguyen42/sidecar/protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nchat.proto\x12\x08tutorial\x1a\x1fgoogle/protobuf/timestamp.proto\"T\n\x12SendMessageRequest\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0f\n\x07message\x18\x02 \x01(\t\"U\n\x13SendMessageResponse\x12-\n\ttimestamp\x18\x01 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x0f\n\x07message\x18\x02 \x01(\t2Y\n\x0b\x43hatService\x12J\n\x0bSendMessage\x12\x1c.tutorial.SendMessageRequest\x1a\x1d.tutorial.SendMessageResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'chat_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z%github.com/ttn-nguyen42/sidecar/proto'
+  DESCRIPTOR._loaded_options = None
   _globals['_SENDMESSAGEREQUEST']._serialized_start=57
   _globals['_SENDMESSAGEREQUEST']._serialized_end=141
   _globals['_SENDMESSAGERESPONSE']._serialized_start=143
