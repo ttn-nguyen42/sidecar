@@ -486,7 +486,5 @@ pip-selfcheck.json
 .ionide
 
 ### Sidecar ###
-MODEL
-whisper.cpp
-helper/proto
-app/proto
+MODELS
+DATA

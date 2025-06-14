@@ -17,14 +17,26 @@ def get_file_path():
 
 def get_default(parser: configparser.ConfigParser):
     parser['log'] = {'level': 'INFO'}
-    parser['api.grpc'] = {'port': '8768'}
-    parser['api.ws'] = {'port': '8778'}
-    parser['model'] = {
+    parser['http'] = {'port': '8768'}
+    parser['chat'] = {
         'token': os.getenv(key='OPENAI_API_KEY', default=''),
-        'chat': '',  # Model name
-        'instruct': '',  # Model name
-        'transcribe': '',  # Path
-        'cus': ''  # Path
+        'name': 'gpt-3.5-turbo',  # Model name
+        'baseUrl': 'https://api.openai.com/v1',  # Path
+    }
+    parser['voice'] = {
+        'name': 'base-q5_1',  # Model name
+        'directory': 'MODELS',  # Path to models directory
+    }
+    parser['sqlite'] = {
+        'path': 'DATA/data.db',  # Path to SQLite database
+    }
+    parser['vector'] = {
+        'path': 'DATA/vector.db',  # Path to vector database
+    }
+    parser['embeddings'] = {
+        'name': 'text-embedding-3-small',  # Model name
+        'baseUrl': 'https://api.openai.com/v1',  # Path
+        'token': os.getenv(key='OPENAI_API_KEY', default=''),
     }
 
 

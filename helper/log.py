@@ -1,14 +1,74 @@
 from configparser import ConfigParser
 import logging
 
-fmt = "%(name)s %(asctime)s %(levelname)s %(message)s"
+fmt = "%(asctime)s %(levelname)s %(message)s"
+datefmt = "%Y-%m-%d %H:%M:%S"
+
+
+def get_uvicorn_log_config(configs: ConfigParser) -> dict:
+    log_level = configs["log"]["level"]
+    return {
+        'version': 1,
+        'disable_existing_loggers': True,
+        'formatters': {
+            'standard': {
+                'format': fmt,
+                'datefmt': datefmt,
+            },
+            'custom_formatter': {
+                'format': fmt,
+                'datefmt': datefmt,
+            },
+        },
+        'handlers': {
+            'default': {
+                'formatter': 'standard',
+                'class': 'logging.StreamHandler',
+                'stream': 'ext://sys.stdout',  # Default is stderr
+            },
+            'stream_handler': {
+                'formatter': 'custom_formatter',
+                'class': 'logging.StreamHandler',
+                'stream': 'ext://sys.stdout',  # Default is stderr
+            },
+            'file_handler': {
+                'formatter': 'custom_formatter',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': 'app.log',
+                'maxBytes': 1024 * 1024 * 1,  # = 1MB
+                'backupCount': 3,
+            },
+        },
+        'loggers': {
+            'uvicorn': {
+                'handlers': ['default', 'file_handler'],
+                'level': log_level,
+                'propagate': False
+            },
+            'uvicorn.access': {
+                'handlers': ['stream_handler', 'file_handler'],
+                'level': log_level,
+                'propagate': False
+            },
+            'uvicorn.error': {
+                'handlers': ['stream_handler', 'file_handler'],
+                'level': log_level,
+                'propagate': False
+            },
+            'uvicorn.asgi': {
+                'handlers': ['stream_handler', 'file_handler'],
+                'level': log_level,
+                'propagate': False
+            },
+        },
+    }
 
 
 def setup_logger(configs: ConfigParser):
     level: str = configs["log"]["level"]
     if level is None:
         level = logging.INFO
-    logging.basicConfig(level=level, format=fmt)
+    logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
 
     return
 

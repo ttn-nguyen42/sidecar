@@ -1,13 +1,23 @@
-from api import run_api
-from config import read_config
-from log import setup_logger
+import logging
+from fastapi import FastAPI
+import uvicorn
+from setup import api_router, registry
+import chat
+import helper
+from log import get_uvicorn_log_config
 
 
-def main():
-    configs = read_config()
-    setup_logger(configs=configs)
-    run_api(configs=configs)
+logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
-    main()
+    configs = registry.get_configs()
+    port = configs['http'].getint('port', 8768)
+    logger.info(f"Starting Sidecar API on port {port}")
+    app = FastAPI(title="Sidecar API",
+                  description="API for Sidecar services",
+                  version="1.0.0")
+    app.include_router(api_router)
+    uvicorn.run(app,
+                port=port,
+                log_config=get_uvicorn_log_config(configs))
