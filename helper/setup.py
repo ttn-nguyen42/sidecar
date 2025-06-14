@@ -1,13 +1,16 @@
 from configparser import ConfigParser
 import logging
 import os
-from fastapi import APIRouter
-from langchain_openai import OpenAI, OpenAIEmbeddings
+from langchain_openai import OpenAI, OpenAIEmbeddings, ChatOpenAI
 from pydantic import SecretStr
 from pywhispercpp.model import Model
 from silero_vad import load_silero_vad
 from langchain_chroma import Chroma
 import sqlite3
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy import event
+from sqlalchemy.orm import sessionmaker, Session
 
 from config import read_config
 from log import setup_logger
@@ -15,7 +18,7 @@ from log import setup_logger
 logger = logging.getLogger(__name__)
 
 
-def init_chat(configs: ConfigParser) -> OpenAI:
+def init_model(configs: ConfigParser) -> OpenAI:
     chat_model = configs['chat']['name']
     logger.info(f"Using chat model: {chat_model}")
     return OpenAI(
@@ -26,10 +29,22 @@ def init_chat(configs: ConfigParser) -> OpenAI:
         max_retries=3)
 
 
+def init_chat_model(configs: ConfigParser) -> ChatOpenAI:
+    chat_model = configs['chat']['name']
+    logger.info(f"Using chat model: {chat_model}")
+    return ChatOpenAI(
+        api_key=SecretStr(configs['chat']['token']),
+        base_url=configs['chat']['baseUrl'],
+        model=chat_model,
+        temperature=0.0,
+        max_retries=3
+    )
+
+
 def init_whisper_model(configs: ConfigParser) -> Model:
     model = configs['voice']['name']
     dir = configs['voice']['directory']
-   
+
     logger.info(f"Using Whisper voice-to-text model: {model}")
     return Model(
         model=model,
@@ -59,11 +74,17 @@ def init_vector_db(configs: ConfigParser, embeddings: OpenAIEmbeddings, collecti
     )
 
 
+def sqlite_pragmas() -> list[str]:
+    return [
+        "PRAGMA foreign_keys=ON;",
+        "PRAGMA journal_mode=WAL;",
+        "PRAGMA synchronous=NORMAL;"
+    ]
+
+
 def init_sqlite(configs: ConfigParser) -> sqlite3.Connection:
     sqlite_path = configs['sqlite']['path']
-    pragmed = ["PRAGMA foreign_keys=ON;",
-               "PRAGMA journal_mode=WAL;",
-               "PRAGMA synchronous=NORMAL;"]
+    pragmed = sqlite_pragmas()
     logger.info(f"Using SQLite database at: {sqlite_path}")
     if os.path.exists(sqlite_path):
         logger.info(f"SQLite database file found at: {sqlite_path}")
@@ -82,20 +103,42 @@ def init_sqlite(configs: ConfigParser) -> sqlite3.Connection:
     return conn
 
 
+def init_sqlalchemy(configs: ConfigParser) -> Engine:
+    sqlite_path = configs['sqlite']['path']
+    engine = create_engine(
+        f'sqlite:///{sqlite_path}', connect_args={"check_same_thread": False})
+    logger.info(f"SQLAlchemy engine created for SQLite at: {sqlite_path}")
+
+    # Set SQLite PRAGMAs on connect
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragmas(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        for pragma in sqlite_pragmas():
+            cursor.execute(pragma)
+        cursor.close()
+
+    return engine
+
+
 class Registry:
     def __init__(self):
         configs = read_config()
         setup_logger(configs=configs)
-        self.chat = init_chat(configs)
+        self.chat = init_chat_model(configs)
+        self.model = init_model(configs)
         self.embeddings = init_embeddings(configs)
         self.voice = init_whisper_model(configs)
         self.vad = load_silero_vad()
         self.vector_cols = {}
         self.sqlite = init_sqlite(configs)
+        self.alchemy = init_sqlalchemy(configs)
         logger.info("Registry initialized with all services")
         self.configs = configs
 
-    def get_chat(self) -> OpenAI:
+    def get_model(self) -> OpenAI:
+        return self.model
+
+    def get_chat(self) -> ChatOpenAI:
         return self.chat
 
     def get_voice(self) -> Model:
@@ -116,6 +159,12 @@ class Registry:
     def get_sqlite(self) -> sqlite3.Connection:
         return self.sqlite
 
+    def get_alchemy(self):
+        return self.alchemy
+
+    def get_session(self) -> Session:
+        Session = sessionmaker(bind=self.alchemy)
+        return Session()
+
 
 registry = Registry()
-api_router = APIRouter()
