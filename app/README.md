@@ -5,6 +5,9 @@
 To get started install the dependencies in both the app and electron directories
 
 ```bash
+# To support package.json
+npm i -g concurrently
+
 # Installing app (solidjs) dependecies
 cd app
 npm install
