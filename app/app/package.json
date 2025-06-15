@@ -1,7 +1,7 @@
 {
-  "name": "vite-template-solid",
-  "version": "0.0.0",
-  "description": "",
+  "name": "overlay-renderer",
+  "version": "0.0.1-DEVELOPMENT",
+  "description": "Sidecar AI agent overlay renderer",
   "type": "module",
   "scripts": {
     "start": "vite",
@@ -17,6 +17,6 @@
     "vite-plugin-solid": "^2.8.2"
   },
   "dependencies": {
-    "solid-js": "^1.8.11"
+    "solid-js": "^1.9.7"
   }
 }

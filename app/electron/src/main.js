@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron/main";
+import { app, BrowserWindow, screen } from "electron/main";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 
@@ -9,29 +9,28 @@ const isDev = process.argv.includes("--mode=dev");
 
 const createWindow = () => {
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    alwaysOnTop: true, // keeps the window always focused
+    width: 64,
+    height: 360,
+    frame: false,
+    alwaysOnTop: true,
+    alwaysOnTopLevel: "floating",
+    transparent: true,
   });
 
+  win.setVisibleOnAllWorkspaces(true);
+
   if (isDev) {
-    // load localhost:3000 during development
-    win.loadURL("http://localhost:3000");
-    win.webContents.openDevTools();
+    win.loadURL("http://127.0.0.1:3000");
   } else {
-    // load index.html in production
     win.loadFile(path.join(__dirname, "../../solidjs_dist/index.html"));
   }
 };
 
+app.commandLine.appendSwitch("auto-detect", "false");
+app.commandLine.appendSwitch("no-proxy-server");
+
 app.whenReady().then(() => {
   createWindow();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
 });
 
 app.on("window-all-closed", () => {

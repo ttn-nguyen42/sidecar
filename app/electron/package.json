@@ -1,7 +1,7 @@
 {
-  "name": "electron",
-  "version": "1.0.0",
-  "description": "",
+  "name": "overlay",
+  "version": "0.0.1-DEVELOPMENT",
+  "description": "Sidecar AI agent overlay",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -9,9 +9,9 @@
     "start:prod": "electron src/main.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "nguyen.trantrung",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^28.2.0"
+    "electron": "^36.0.0"
   }
 }
