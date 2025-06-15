@@ -2,6 +2,7 @@ import logging
 from fastapi import FastAPI
 import uvicorn
 from services import models
+import voice
 from setup import registry
 import chat
 import helper
@@ -22,6 +23,7 @@ if __name__ == "__main__":
                   version="1.0.0")
     app.include_router(chat.router)
     app.include_router(helper.router)
+    app.include_router(voice.router)
     uvicorn.run(app,
                 port=port,
                 log_config=get_uvicorn_log_config(configs))
