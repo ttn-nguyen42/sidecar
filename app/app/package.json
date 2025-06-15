@@ -17,6 +17,7 @@
     "vite-plugin-solid": "^2.8.2"
   },
   "dependencies": {
-    "solid-js": "^1.9.7"
+    "solid-js": "^1.9.7",
+    "electron": "^36.0.0"
   }
 }
