@@ -11,6 +11,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 from sqlalchemy.orm import sessionmaker, Session
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from config import read_config
 from log import setup_logger
@@ -120,6 +122,13 @@ def init_sqlalchemy(configs: ConfigParser) -> Engine:
     return engine
 
 
+def init_sqlite_saver(configs: ConfigParser, conn: sqlite3.Connection) -> BaseCheckpointSaver:
+    sqlite_path = configs['sqlite']['path']
+    saver = SqliteSaver(conn=conn)
+    logger.info(f"SQLite graph database created at: {sqlite_path}")
+    return saver
+
+
 class Registry:
     def __init__(self):
         configs = read_config()
@@ -132,6 +141,7 @@ class Registry:
         self.vector_cols = {}
         self.sqlite = init_sqlite(configs)
         self.alchemy = init_sqlalchemy(configs)
+        self.saver = init_sqlite_saver(configs, self.sqlite)
         logger.info("Registry initialized with all services")
         self.configs = configs
 
@@ -165,6 +175,9 @@ class Registry:
     def get_session(self) -> Session:
         Session = sessionmaker(bind=self.alchemy)
         return Session()
+
+    def get_saver(self) -> SqliteSaver:
+        return self.saver
 
 
 registry = Registry()

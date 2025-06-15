@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from services.chat import ChatService, CreateThreadRequest
+from services.chat import ChatRequest, ChatService, CreateThreadRequest
 from setup import registry
 
 router = APIRouter(prefix="/chat")
@@ -30,9 +30,15 @@ async def delete_thread(id: str):
     return {"message": f"Thread {id} deleted"}
 
 
-@router.post("/thread/{id}/send")
-async def send(id: str):
-    return {"message": f"Message sent to thread {id}"}
+@router.post("/thread/send")
+async def send(body: ChatRequest):
+    try:
+        response = service.send_message(body)
+        return response
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/thread/{id}/poll")
