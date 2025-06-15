@@ -11,14 +11,14 @@ const resizeExpand = (cb?: () => void) => {
     window.electronAPI?.onWindowResized(() => {
         cb && cb();
     });
-    window.electronAPI?.resizeWindow(384, 360, 'left');
+    window.electronAPI?.resizeWindow(360, 360, 'down');
 };
 
 const resizeCollapse = (cb?: () => void) => {
     window.electronAPI?.onWindowResized(() => {
         cb && cb();
     });
-    window.electronAPI?.resizeWindow(64, 360, 'right');
+    window.electronAPI?.resizeWindow(360, 48, 'up');
 };
 
 export { resizeExpand, resizeCollapse };

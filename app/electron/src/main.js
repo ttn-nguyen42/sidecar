@@ -10,14 +10,14 @@ const isDev = process.argv.includes("--mode=dev");
 let win;
 const createWindow = () => {
   win = new BrowserWindow({
-    width: 64,
-    height: 360,
+    width: 360,
+    height: 48,
     frame: false,
     alwaysOnTop: true,
     alwaysOnTopLevel: "floating",
-    transparent: true,
+    // transparent: true,
     fullscreenable: false,
-    resizable: false,
+    resizable: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -47,20 +47,11 @@ app.on("window-all-closed", () => {
   }
 });
 
-ipcMain.on("resize-window", (event, { width, height, direction }) => {
+ipcMain.on("resize-window", (event, { width, height }) => {
   if (win) {
     const [currentX, currentY] = win.getPosition();
-    const [currentWidth, currentHeight] = win.getSize();
-    let newX = currentX;
-    if (direction === "left") {
-      // Expand left: move x so right edge stays fixed
-      newX = currentX - (width - currentWidth);
-    } else if (direction === "right") {
-      // Retract right: move x so right edge stays fixed
-      newX = currentX + (currentWidth - width);
-    }
-    win.setBounds({ x: newX, y: currentY, width, height }, true);
-    // Notify renderer that resizing is done
-    event.sender.send("window-resized", { width, height, direction });
+    
+    win.setBounds({ x: currentX, y: currentY, width, height }, true);
+    event.sender.send("window-resized", { width, height });
   }
 });

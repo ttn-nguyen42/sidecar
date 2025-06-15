@@ -8,17 +8,17 @@ import { resizeCollapse, resizeExpand } from "./resize";
 
 const App: Component = () => {
     const [item, setItem] = createSignal<string>("");
-    const [showLeftSpace, setShowLeftSpace] = createSignal(false);
+    const [showBottomSpace, setShowBottomSpace] = createSignal(false);
 
     const openResize = (itemName: string) => {
         if (item() === itemName) {
             resizeCollapse(() => {
-                setShowLeftSpace(false);
+                setShowBottomSpace(false);
                 setItem("");
             });
         } else {
+            setShowBottomSpace(true);
             resizeExpand(() => {
-                setShowLeftSpace(true);
                 setItem(itemName);
             });
         }
@@ -26,9 +26,6 @@ const App: Component = () => {
 
     return (
         <div class={styles.app}>
-            {showLeftSpace() && <div class={styles.leftSpace}>
-                {item() === "chat" && <Chat />}
-            </div>}
             <div class={styles.menuContainer}>
                 <Menu byItem={{
                     chat: () => { openResize("chat") },
@@ -38,6 +35,9 @@ const App: Component = () => {
                     reminders: () => { openResize("reminders") },
                 }} />
             </div>
+            {showBottomSpace() && <div class={styles.bottomSpace}>
+                {item() === "chat" && <Chat />}
+            </div>}
         </div>
     );
 };

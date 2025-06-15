@@ -16,7 +16,7 @@ export interface MenuProps {
 const Menu: Component<MenuProps> = (props) => {
     return <div class={styles.menu}>
         <Button class={styles.button} variant="ghost" onClick={() => props.byItem.chat?.()}>
-            <HiOutlineChatBubbleBottomCenterText size={32} />
+            <HiOutlineChatBubbleBottomCenterText size={24} />
         </Button>
     </div>;
 };
