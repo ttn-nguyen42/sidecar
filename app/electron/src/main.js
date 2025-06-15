@@ -17,6 +17,7 @@ const createWindow = () => {
     alwaysOnTopLevel: "floating",
     transparent: true,
     fullscreenable: false,
+    resizable: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -46,8 +47,20 @@ app.on("window-all-closed", () => {
   }
 });
 
-ipcMain.on("resize-window", (event, { width, height }) => {
+ipcMain.on("resize-window", (event, { width, height, direction }) => {
   if (win) {
-    win.setSize(width, height, true);
+    const [currentX, currentY] = win.getPosition();
+    const [currentWidth, currentHeight] = win.getSize();
+    let newX = currentX;
+    if (direction === "left") {
+      // Expand left: move x so right edge stays fixed
+      newX = currentX - (width - currentWidth);
+    } else if (direction === "right") {
+      // Retract right: move x so right edge stays fixed
+      newX = currentX + (currentWidth - width);
+    }
+    win.setBounds({ x: newX, y: currentY, width, height }, true);
+    // Notify renderer that resizing is done
+    event.sender.send("window-resized", { width, height, direction });
   }
 });

@@ -1,37 +1,42 @@
-import type { Component } from "solid-js";
-import { createSignal } from "solid-js";
+import { createSignal, type Component } from "solid-js";
 
-import logo from "./logo.svg";
 import styles from "./App.module.css";
+import Menu from "./Menu";
+import Chat from "./spaces/Chat";
+import { resizeCollapse, resizeExpand } from "./resize";
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      resizeWindow: (width: number, height: number) => void;
-    };
-  }
-}
 
 const App: Component = () => {
-    const buttons = ["B1", "B2", "B3", "B4", "B5"];
-    const [showLeft, setShowLeft] = createSignal(false);
+    const [item, setItem] = createSignal<string>("");
+    const [showLeftSpace, setShowLeftSpace] = createSignal(false);
+
+    const openResize = (itemName: string) => {
+        if (item() === itemName) {
+            resizeCollapse(() => {
+                setShowLeftSpace(false);
+                setItem("");
+            });
+        } else {
+            resizeExpand(() => {
+                setShowLeftSpace(true);
+                setItem(itemName);
+            });
+        }
+    }
+
     return (
         <div class={styles.app}>
-            {showLeft() && <div class={styles.leftSpace}>Hi</div>}
-            <div class={styles.menu}>
-                {buttons.map((label) => (
-                    <button
-                        class={styles.button}
-                        onClick={() => {
-                            if (label === "B1") {
-                                setShowLeft(true);
-                                window.electronAPI?.resizeWindow(520, 360);
-                            }
-                        }}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {showLeftSpace() && <div class={styles.leftSpace}>
+                {item() === "chat" && <Chat />}
+            </div>}
+            <div class={styles.menuContainer}>
+                <Menu byItem={{
+                    chat: () => { openResize("chat") },
+                    settings: () => { openResize("settings") },
+                    voice: () => { openResize("voice") },
+                    notes: () => { openResize("notes") },
+                    reminders: () => { openResize("reminders") },
+                }} />
             </div>
         </div>
     );
