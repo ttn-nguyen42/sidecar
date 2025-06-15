@@ -30,33 +30,11 @@ def get_uvicorn_log_config(configs: ConfigParser) -> dict:
                 'formatter': 'custom_formatter',
                 'class': 'logging.StreamHandler',
                 'stream': 'ext://sys.stdout',  # Default is stderr
-            },
-            'file_handler': {
-                'formatter': 'custom_formatter',
-                'class': 'logging.handlers.RotatingFileHandler',
-                'filename': 'app.log',
-                'maxBytes': 1024 * 1024 * 1,  # = 1MB
-                'backupCount': 3,
-            },
+            }
         },
         'loggers': {
             'uvicorn': {
-                'handlers': ['default', 'file_handler'],
-                'level': log_level,
-                'propagate': False
-            },
-            'uvicorn.access': {
-                'handlers': ['stream_handler', 'file_handler'],
-                'level': log_level,
-                'propagate': False
-            },
-            'uvicorn.error': {
-                'handlers': ['stream_handler', 'file_handler'],
-                'level': log_level,
-                'propagate': False
-            },
-            'uvicorn.asgi': {
-                'handlers': ['stream_handler', 'file_handler'],
+                'handlers': ['default'],
                 'level': log_level,
                 'propagate': False
             },

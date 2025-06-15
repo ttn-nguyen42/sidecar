@@ -38,5 +38,18 @@ class VoiceService():
 
         return TranscribeResponse(text=text, duration=(end - start).total_seconds())
 
+    async def transcribe_bytes(self, data: bytes) -> TranscribeResponse:
+        np_data = wav_to_np(data)
+        logger.info(f"Transcribing bytes: {len(data)}")
+
+        start = datetime.now()
+        segments = self.model.transcribe(
+            np_data, new_segment_callback=self._new_segment_callback, print_progress=False)
+        end = datetime.now()
+        text = ""
+        for s in segments:
+            text += s.text
+        return TranscribeResponse(text=text, duration=(end - start).total_seconds())
+
     def _new_segment_callback(self, segment: Segment):
         logger.info(f"New segment: {segment}")
