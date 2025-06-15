@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from "electron/main";
+import { app, BrowserWindow, screen, ipcMain } from "electron/main";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 
@@ -7,14 +7,21 @@ const __dirname = dirname(__filename);
 
 const isDev = process.argv.includes("--mode=dev");
 
+let win;
 const createWindow = () => {
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 64,
     height: 360,
     frame: false,
     alwaysOnTop: true,
     alwaysOnTopLevel: "floating",
     transparent: true,
+    fullscreenable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
 
   win.setVisibleOnAllWorkspaces(true);
@@ -36,5 +43,11 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
+  }
+});
+
+ipcMain.on("resize-window", (event, { width, height }) => {
+  if (win) {
+    win.setSize(width, height, true);
   }
 });
