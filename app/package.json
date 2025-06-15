@@ -1,0 +1,16 @@
+{
+  "name": "sidecar-app",
+  "version": "0.0.1-DEVELOPMENT",
+  "description": "Sidecar AI agent",
+  "scripts": {
+    "dev": "concurrently \"cd app && npm run dev\" \"cd electron && npm run start:dev\"",
+    "start": "cd electron && npm run start:prod"
+  },
+  "keywords": [
+    "sidecar",
+    "ai",
+    "agent"
+  ],
+  "author": "nguyen.trantrung",
+  "license": "ISC"
+}

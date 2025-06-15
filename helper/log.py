@@ -44,8 +44,6 @@ def get_uvicorn_log_config(configs: ConfigParser) -> dict:
 
 def setup_logger(configs: ConfigParser):
     level: str = configs["log"]["level"]
-    if level is None:
-        level = logging.INFO
     logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
 
     return
