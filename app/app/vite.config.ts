@@ -12,7 +12,7 @@ export default defineConfig({
   },
   plugins: [tailwindcss(), solidPlugin()],
   server: {
-    port: 3000,
+    port: 5173,
   },
   build: {
     outDir: "../solidjs_dist",

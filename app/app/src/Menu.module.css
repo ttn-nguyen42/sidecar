@@ -6,6 +6,7 @@
     height: 100%;
     width: 100%;
     -webkit-app-region: drag;
+    gap: 4px;
 }
 
 .menu > * {

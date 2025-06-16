@@ -1,12 +1,17 @@
-import { createSignal } from "solid-js";
+import { type Component, createSignal } from "solid-js";
 
-const CUse = () => {
+interface CUseProps {
+    setBottomSpaceHeight: (h: number) => void;
+    setWindowHeight: (h: number) => void;
+}
+
+const CUse: Component<CUseProps> = (props) => {
     const [count, setCount] = createSignal(0);
 
     return <div>
         <button onClick={() => setCount(count() + 1)}>Click me</button>
         <p>Count: {count()}</p>
-    </div>
+    </div>;
 }
 
 export default CUse;

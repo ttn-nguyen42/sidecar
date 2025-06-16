@@ -9,23 +9,72 @@ import Notes from "./spaces/Notes";
 import Tasks from "./spaces/Tasks";
 import CUse from "./spaces/CUse";
 import Translate from "./spaces/Translate";
-import { resizeTo, FullExpanded, ShortExpanded, Collapsed, FullWidth, MiddleExpanded } from "./resize";
+import { resizeTo, FullExpanded, ShortExpanded, Collapsed, FullWidth, MiddleExpanded, MenuHeight } from "./resize";
+import "./app.css";
 
 const App: Component = () => {
     const [item, setItem] = createSignal<string>("");
     const [showBottomSpace, setShowBottomSpace] = createSignal(false);
+    const [bottomSpaceHeight, setBottomSpaceHeight] = createSignal(MiddleExpanded);
+
+    const setWindowHeight = (height: number, cb?: () => void) => {
+        resizeTo(FullWidth, height, cb);
+    };
 
     const openResize = (itemName: string, height: number) => {
         if (item() === itemName) {
+            setItem("");
             resizeTo(FullWidth, Collapsed, () => {
                 setShowBottomSpace(false);
-                setItem("");
             });
         } else {
             setItem(itemName);
-            resizeTo(FullExpanded, height, () => {
-                setShowBottomSpace(true);
+            setBottomSpaceHeight(height);
+            setShowBottomSpace(true);
+            resizeTo(FullWidth, height, () => {
+
             });
+        }
+    }
+
+    // Electron on macOS has a bug where the bottom border is clipped if backgroundColor is not set
+    const setBodyBackground = (color: string) => {
+        document.body.style.backgroundColor = color;
+    };
+
+    function renderBottomSpaceContent() {
+        switch (item()) {
+            case "chat":
+                return <Chat
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight} />;
+            case "voice":
+                return <Voice
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight}
+                    setBodyBackground={setBodyBackground} />;
+            case "translate":
+                return <Translate
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight} />;
+            case "notes":
+                return <Notes
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight} />;
+            case "tasks":
+                return <Tasks
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight} />;
+            case "cUse":
+                return <CUse
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight} />;
+            case "settings":
+                return <Settings
+                    setBottomSpaceHeight={setBottomSpaceHeight}
+                    setWindowHeight={setWindowHeight} />;
+            default:
+                return null;
         }
     }
 
@@ -45,17 +94,17 @@ const App: Component = () => {
                     }}
                 />
             </div>
-            {showBottomSpace() && <div class={styles.bottomSpace}>
-                {item() === "chat" && <Chat />}
-                {item() === "voice" && <Voice />}
-                {item() === "translate" && <Translate />}
-                {item() === "notes" && <Notes />}
-                {item() === "tasks" && <Tasks />}
-                {item() === "cUse" && <CUse />}
-                {item() === "settings" && <Settings />}
-            </div>}
+            {showBottomSpace() && (
+                <div
+                    class={styles.bottomSpace}
+                    style={{ height: `${bottomSpaceHeight() - MenuHeight}px` }}
+                >
+                    {renderBottomSpaceContent()}
+                </div>
+            )}
         </div>
     );
 };
 
 export default App;
+

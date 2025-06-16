@@ -1,21 +1,56 @@
-import { createSignal } from "solid-js";
+import { createSignal, onMount, type Component } from "solid-js";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import styles from "./voice.module.css";
 import { Speech, AudioLines } from 'lucide-solid'
-import { FullWidth, resizeTo, Expand75, MiddleExpanded } from "@/resize";
+import { Expand75, Collapsed, MiddleExpanded, FullExpanded } from "@/resize";
 
-const Voice = () => {
+interface VoiceProps {
+    setBottomSpaceHeight: (h: number) => void;
+    setWindowHeight: (h: number, cb?: () => void) => void;
+    setBodyBackground: (color: string) => void;
+}
+
+const Voice: Component<VoiceProps> = (props) => {
     const [isRecording, setIsRecording] = createSignal(false);
+    const [selectedDevice, setSelectedDevice] = createSignal<string>("");
+    const [isSelectOpen, setIsSelectOpen] = createSignal(false);
+
+    const audioDevices = [
+        "Default Audio Device",
+        "Built-in Microphone",
+        "External USB Microphone",
+        "Bluetooth Headset",
+        "Webcam Microphone"
+    ];
+
+    onMount(() => {
+        setSelectedDevice("Default Audio Device");
+    });
 
     const toggleRecording = () => {
         if (isRecording()) {
             setIsRecording(false);
-            resizeTo(FullWidth, MiddleExpanded, () => {
-
-            });
+            props.setBottomSpaceHeight(MiddleExpanded);
+            props.setWindowHeight(MiddleExpanded);
+            props.setBodyBackground("transparent");
         } else {
             setIsRecording(true);
-            resizeTo(FullWidth, Expand75, () => {
+            props.setBottomSpaceHeight(Expand75);
+            props.setWindowHeight(Expand75);
+            props.setBodyBackground("#ffffff");
+        }
+    };
+
+
+    const handleSelectOpenChange = (isOpen: boolean) => {
+        if (isOpen) {
+            props.setWindowHeight(MiddleExpanded + 5 * 16, () => {
+                setIsSelectOpen(true);
+            });
+        } else {
+            setIsSelectOpen(false);
+            props.setWindowHeight(MiddleExpanded, () => {
 
             });
         }
@@ -26,7 +61,7 @@ const Voice = () => {
             <Button
                 variant="default"
                 size="default"
-                class={`${isRecording() ? 'bg-red-600 text-white hover:bg-red-600' : 'bg-black text-white hover:bg-black/90'} flex items-center gap-2 w-24`}
+                class={`${isRecording() ? styles.stopButton : styles.startButton} flex items-center gap-2 w-24`}
                 onClick={toggleRecording}
             >
                 {isRecording() ?
@@ -35,13 +70,40 @@ const Voice = () => {
                 }
                 {isRecording() ? 'Stop' : 'Start'}
             </Button>
+            <Select
+                options={audioDevices}
+                value={selectedDevice()}
+                open={isSelectOpen()}
+                onChange={setSelectedDevice}
+                onOpenChange={handleSelectOpenChange}
+                placeholder="Select Audio Device..."
+                itemComponent={props => (
+                    <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
+                )}
+                disabled={isRecording()}
+                class={styles.selectAudioDevice}
+            >
+                <SelectTrigger class={styles.audioSelect}>
+                    <SelectValue<string>>
+                        {state => state.selectedOption()}
+                    </SelectValue>
+                </SelectTrigger>
+                <SelectContent class={styles.selectContent} />
+            </Select>
         </div>
         {!isRecording() && (
-            <div class={styles.voiceText}>
-                <p>Powered by whisper.cpp</p>
+            <div class={styles.voiceControls}>
+                <div class={styles.voiceText}>
+                    <p>Powered by whisper.cpp</p>
+                </div>
             </div>
         )}
-    </div>
-}
+        {isRecording() && (
+            <div class={styles.conversation}>
+                Hi
+            </div>
+        )}
+    </div>;
+};
 
 export default Voice;
