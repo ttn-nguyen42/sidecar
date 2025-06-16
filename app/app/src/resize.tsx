@@ -1,24 +1,24 @@
 declare global {
     interface Window {
         electronAPI?: {
-            resizeWindow: (width: number, height: number, direction: string) => void;
+            resizeWindow: (width: number, height: number) => void;
             onWindowResized: (cb: () => void) => void;
         };
     }
 }
 
-const resizeExpand = (cb?: () => void) => {
+const FullExpanded = 360;
+const ShortExpanded = 86;
+const MiddleExpanded = 128;
+const Expand75 = 270;
+const Collapsed = 48;
+const FullWidth = 360;
+
+const resizeTo = (width: number, height: number, cb?: () => void) => {
     window.electronAPI?.onWindowResized(() => {
         cb && cb();
     });
-    window.electronAPI?.resizeWindow(360, 360, 'down');
+    window.electronAPI?.resizeWindow(width, height);
 };
 
-const resizeCollapse = (cb?: () => void) => {
-    window.electronAPI?.onWindowResized(() => {
-        cb && cb();
-    });
-    window.electronAPI?.resizeWindow(360, 48, 'up');
-};
-
-export { resizeExpand, resizeCollapse };
+export { resizeTo, FullExpanded, ShortExpanded, MiddleExpanded, Collapsed, FullWidth, Expand75 };

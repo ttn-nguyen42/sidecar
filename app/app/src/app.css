@@ -72,5 +72,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+  code, pre, .font-mono {
+    font-family: 'Ubuntu Mono', 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
   }
 }

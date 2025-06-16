@@ -1,9 +1,13 @@
 .menu {
     display: flex;
     flex-direction: row;
-    justify-content: start;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
     height: 100%;
     width: 100%;
+    -webkit-app-region: drag;
+}
+
+.menu > * {
+    flex: 1;
 }

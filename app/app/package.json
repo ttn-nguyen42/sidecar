@@ -22,6 +22,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron": "^36.0.0",
+    "lucide-solid": "^0.515.0",
     "solid-icons": "^1.1.0",
     "solid-js": "^1.9.7",
     "tailwind-merge": "^3.3.1",

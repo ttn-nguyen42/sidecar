@@ -17,7 +17,7 @@ const createWindow = () => {
     alwaysOnTopLevel: "floating",
     // transparent: true,
     fullscreenable: false,
-    resizable: true,
+    resizable: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -28,7 +28,7 @@ const createWindow = () => {
   win.setVisibleOnAllWorkspaces(true);
 
   if (isDev) {
-    win.loadURL("http://127.0.0.1:3000");
+    win.loadURL("http://localhost:3000");
   } else {
     win.loadFile(path.join(__dirname, "../../solidjs_dist/index.html"));
   }
