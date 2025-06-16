@@ -12,5 +12,7 @@
     "agent"
   ],
   "author": "nguyen.trantrung",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+  }
 }

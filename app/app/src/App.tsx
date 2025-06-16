@@ -9,7 +9,7 @@ import Notes from "./spaces/Notes";
 import Tasks from "./spaces/Tasks";
 import CUse from "./spaces/CUse";
 import Translate from "./spaces/Translate";
-import { resizeTo, FullExpanded, ShortExpanded, Collapsed, FullWidth, MiddleExpanded, MenuHeight } from "./resize";
+import { resizeTo, FullExpanded, Collapsed, FullWidth, MiddleExpanded, MenuHeight } from "./resize";
 import "./app.css";
 
 const App: Component = () => {

@@ -176,7 +176,7 @@ class Registry:
         Session = sessionmaker(bind=self.alchemy)
         return Session()
 
-    def get_saver(self) -> SqliteSaver:
+    def get_saver(self) -> BaseCheckpointSaver:
         return self.saver
 
 

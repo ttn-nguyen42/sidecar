@@ -39,14 +39,16 @@ class ChatResponse(BaseModel):
     refusal: bool
 
     def __repr__(self):
-        return f"ChatResponse(id={self.id}, content={self.content}, refusal={self.refusal})"
+        return f"ChatResponse(id={self.message_id}, content={self.content}, refusal={self.refusal})"
 
+    @staticmethod
     def from_ai(message: AIMessage) -> 'ChatResponse':
         refusal = False
         args = message.additional_kwargs
         if 'refusal' in args and args['refusal']:
             refusal = True
-        return ChatResponse(message_id=message.id, content=message.content, refusal=refusal)
+        # TODO: Handle message.context returning list of messages
+        return ChatResponse(message_id=message.id or "", content=str(message.content), refusal=refusal)
 
 
 class ChatService():
@@ -82,7 +84,8 @@ class ChatService():
             return ChatResponse.from_ai(response)
         else:
             logger.warning(f"Unexpected response type: {type(response)}")
-            return ChatResponse(message_id=response.id, content=response.content, refusal=False)
+            # TODO: Handle unexpected content types
+            return ChatResponse(message_id=response.id or "", content=str(response.content), refusal=False)
 
     def _set_last_updated(self, thread_id: int):
         with get_session(self.registry) as session:

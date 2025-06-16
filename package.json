@@ -1,5 +1,28 @@
 {
+  "name": "voice-recording-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for receiving PCM audio data and saving as WAV files",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
   "dependencies": {
-    "electron-forge": "^5.2.4"
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "websocket",
+    "audio",
+    "recording",
+    "pcm",
+    "wav"
+  ],
+  "author": "",
+  "license": "MIT",
+  "optionalDependencies": {
+    "bufferutil": "^4.0.9"
   }
 }

@@ -44,9 +44,9 @@
 
 /* Select components */
 .selectAudioDevice {
-    max-width: 100%;
+    width: 70%;
     -webkit-app-region: no-drag;
-    min-width: 0;
+    min-width: 0%;
 }
 
 .audioSelect {
@@ -62,16 +62,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}   
+}
 
 /* Voice controls section */
 .voiceControls {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .voiceText {
     text-align: start;
+}
+
+.connectionStatus {
+    text-align: end;
 }
 
 .voiceText p {
