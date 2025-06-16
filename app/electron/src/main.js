@@ -17,7 +17,7 @@ const createWindow = () => {
     alwaysOnTopLevel: "floating",
     transparent: true,
     fullscreenable: false,
-    resizable: true,
+    resizable: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

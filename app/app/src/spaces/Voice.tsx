@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import styles from "./voice.module.css";
 import { Speech, AudioLines } from 'lucide-solid'
 import { Expand75, Collapsed, MiddleExpanded, FullExpanded } from "@/resize";
+import { getDevices, getUserMedia } from "@/libs/voice";
 
 interface VoiceProps {
     setBottomSpaceHeight: (h: number) => void;
@@ -15,17 +16,14 @@ const Voice: Component<VoiceProps> = (props) => {
     const [isRecording, setIsRecording] = createSignal(false);
     const [selectedDevice, setSelectedDevice] = createSignal<string>("");
     const [isSelectOpen, setIsSelectOpen] = createSignal(false);
+    const [audioDevices, setAudioDevices] = createSignal<string[]>([]);
 
-    const audioDevices = [
-        "Default Audio Device",
-        "Built-in Microphone",
-        "External USB Microphone",
-        "Bluetooth Headset",
-        "Webcam Microphone"
-    ];
-
-    onMount(() => {
-        setSelectedDevice("Default Audio Device");
+    onMount(async () => {
+        const devices = await getDevices("audioinput");
+        setAudioDevices(devices.map((device) => device.label));
+        if (audioDevices().length > 0) {
+            setSelectedDevice(audioDevices()[0]);
+        }
     });
 
     const toggleRecording = () => {
@@ -63,6 +61,7 @@ const Voice: Component<VoiceProps> = (props) => {
                 size="default"
                 class={`${isRecording() ? styles.stopButton : styles.startButton} flex items-center gap-2 w-24`}
                 onClick={toggleRecording}
+                disabled={audioDevices().length === 0}
             >
                 {isRecording() ?
                     <AudioLines size={18} class="animate-pulse" /> :
@@ -71,20 +70,22 @@ const Voice: Component<VoiceProps> = (props) => {
                 {isRecording() ? 'Stop' : 'Start'}
             </Button>
             <Select
-                options={audioDevices}
+                options={audioDevices()}
                 value={selectedDevice()}
                 open={isSelectOpen()}
                 onChange={setSelectedDevice}
                 onOpenChange={handleSelectOpenChange}
+
                 placeholder="Select Audio Device..."
                 itemComponent={props => (
                     <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
                 )}
                 disabled={isRecording()}
                 class={styles.selectAudioDevice}
+                disallowEmptySelection={true}
             >
                 <SelectTrigger class={styles.audioSelect}>
-                    <SelectValue<string>>
+                    <SelectValue<string> class={styles.selectValueText}>
                         {state => state.selectedOption()}
                     </SelectValue>
                 </SelectTrigger>
