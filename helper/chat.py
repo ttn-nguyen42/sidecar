@@ -1,12 +1,14 @@
 import logging
 from fastapi import APIRouter, HTTPException
 from services.chat import ChatRequest, ChatService, CreateThreadRequest
+from sse_starlette import EventSourceResponse
 from setup import registry
 
 router = APIRouter(prefix="/chat")
 service = ChatService(registry)
 
 logger = logging.getLogger(__name__)
+
 
 @router.post("/thread")
 async def create_thread(body: CreateThreadRequest):
@@ -36,8 +38,7 @@ async def delete_thread(id: str):
 @router.post("/thread/send")
 async def send(body: ChatRequest):
     try:
-        response = await service.send_message(body)
-        return response
+        return EventSourceResponse(service.send_message(body))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

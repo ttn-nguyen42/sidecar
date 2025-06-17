@@ -45,9 +45,9 @@ class History(Base):
         DateTime, nullable=False, default=func.now(), onupdate=func.now())
 
     @staticmethod
-    def from_ai(message: AIMessage, thread_id: int, turn_id: int) -> 'History':
+    def build(content: str, thread_id: int, turn_id: int) -> 'History':
         return History(role="assistant",
-                       content=message.content,
+                       content=content,
                        thread_id=thread_id,
                        turn_id=turn_id)
 

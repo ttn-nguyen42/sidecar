@@ -1,12 +1,13 @@
 from datetime import datetime
 import logging
+from typing import AsyncGenerator
 from services.models import History, Thread, new_run_id, role_order
 from setup import Registry
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 from pydantic import BaseModel
 import sys
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from services.prompts import ps
 from util import get_session
 sys.path.append("..")
@@ -45,22 +46,18 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    msg_id: int
-    thread_id: int
-    turn_id: int
     content: str
-    refusal: bool
 
     def __repr__(self):
-        return f"ChatResponse(id={self.msg_id}, content={self.content}, refusal={self.refusal})"
+        return f"ChatResponse(content={self.content})"
 
     @staticmethod
     def from_history(history: History) -> 'ChatResponse':
-        return ChatResponse(msg_id=history.id,
-                            thread_id=history.thread_id,
-                            turn_id=history.turn_id,
-                            content=history.content,
-                            refusal=False)
+        return ChatResponse(content=history.content)
+
+    @staticmethod
+    def from_chunk(chunk: AIMessage) -> 'ChatResponse':
+        return ChatResponse(content=chunk.content)
 
 
 class ChatService():
@@ -84,7 +81,7 @@ class ChatService():
         with get_session(self.registry) as session:
             return session.query(Thread).all()
 
-    async def send_message(self, request: ChatRequest) -> ChatResponse:
+    async def send_message(self, request: ChatRequest) -> AsyncGenerator[ChatResponse, None]:
         run_id = 0
 
         with get_session(self.registry) as session:
@@ -108,23 +105,28 @@ class ChatService():
         prompts = self._build_prompt(vector_memory, human.content)
 
         start = datetime.now()
-        response = self.chat_model.invoke(prompts)
+
+        response = []
+        async for chunk in self.chat_model.astream(prompts):
+            logger.debug(f"Chunk: {chunk}")
+            response.append(chunk)
+            yield ChatResponse.from_chunk(chunk)
+
         end = datetime.now()
 
-        prompts.append({"role": "assistant", "content": response.content})
+        content = "".join([m.content for m in response])
+        prompts.append({"role": "assistant", "content": content})
         await self._add_memory(run_id, prompts)
 
         logger.info(
             f"Chat sent message to thread {request.id}, timestamp: {datetime.now()}, ms: {end - start}")
 
-        ai_history = History.from_ai(response, request.id, turn_id)
+        ai_history = History.build(content, request.id, turn_id)
 
         with get_session(self.registry) as session:
             session.add(ai_history)
             self._set_last_updated(session, request.id)
             session.commit()
-
-            return ChatResponse.from_history(ai_history)
 
     def _set_last_updated(self, session: Session, thread_id: int):
         session.query(Thread) \
