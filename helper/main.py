@@ -26,6 +26,9 @@ if __name__ == "__main__":
     app.include_router(chat.router)
     app.include_router(helper.router)
     app.include_router(voice.router)
-    uvicorn.run(app,
-                port=port,
-                log_config=get_uvicorn_log_config(configs))
+    try:
+        uvicorn.run(app,
+                    port=port,
+                    log_config=get_uvicorn_log_config(configs))
+    finally:
+        registry.close()

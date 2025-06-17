@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException
 from services.chat import ChatRequest, ChatService, CreateThreadRequest
 from setup import registry
@@ -5,6 +6,7 @@ from setup import registry
 router = APIRouter(prefix="/chat")
 service = ChatService(registry)
 
+logger = logging.getLogger(__name__)
 
 @router.post("/thread")
 async def create_thread(body: CreateThreadRequest):
@@ -14,7 +16,8 @@ async def create_thread(body: CreateThreadRequest):
 
 @router.get("/threads")
 async def list_threads():
-    return {"message": "List of threads"}
+    threads = service.list_threads()
+    return {"threads": [t.to_dict() for t in threads]}
 
 
 @router.get("/thread/{id}")
@@ -33,11 +36,12 @@ async def delete_thread(id: str):
 @router.post("/thread/send")
 async def send(body: ChatRequest):
     try:
-        response = service.send_message(body)
+        response = await service.send_message(body)
         return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Error sending message: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -47,5 +51,6 @@ async def poll(id: str):
 
 
 @router.get("/thread/{id}/messages")
-async def get_messages(id: str):
-    return {"message": f"Messages for thread {id}"}
+async def get_messages(id: str, page: int, limit: int):
+    messages = service.get_messages(id, page, limit)
+    return {"messages": [m.to_dict() for m in messages]}

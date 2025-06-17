@@ -41,6 +41,9 @@ def get_default(parser: configparser.ConfigParser):
         'baseUrl': 'https://api.openai.com/v1',  # Path
         'token': os.getenv(key='OPENAI_API_KEY', default=''),
     }
+    parser['memory'] = {
+        'path': 'DATA/memory.db',  # Path to memory database
+    }
 
 
 def read_config():

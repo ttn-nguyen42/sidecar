@@ -10,11 +10,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 from sqlalchemy.orm import sessionmaker, Session
-from langgraph.checkpoint.sqlite import SqliteSaver
-from langgraph.checkpoint.base import BaseCheckpointSaver
 from config import read_config
 from log import setup_logger
 import webrtcvad
+from mem0 import AsyncMemory
+from mem0.configs.base import MemoryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -121,11 +121,55 @@ def init_sqlalchemy(configs: ConfigParser) -> Engine:
     return engine
 
 
-def init_sqlite_saver(configs: ConfigParser, conn: sqlite3.Connection) -> BaseCheckpointSaver:
-    sqlite_path = configs['sqlite']['path']
-    saver = SqliteSaver(conn=conn)
-    logger.info(f"SQLite graph database created at: {sqlite_path}")
-    return saver
+class Mem0Configurer:
+    def __init__(self, configs: ConfigParser):
+        self.configs = configs
+
+    def get_memory(self) -> AsyncMemory:
+        mc = self._get_configs()
+        return AsyncMemory(config=mc)
+
+    def _get_configs(self) -> MemoryConfig:
+        return MemoryConfig(
+            vector_store=self._get_vector_store(),
+            llm=self._get_llm(),
+            embedder=self._get_embeddings(),
+            history_db_path=self.configs['memory']['path']
+        )
+
+    def _get_vector_store(self) -> dict[str, any]:
+        return {
+            "provider": "chroma",
+            "config": {
+                "collection_name": "chat",
+                "path": self.configs['vector']['path']
+            }
+        }
+
+    def _get_llm(self) -> dict[str, any]:
+        return {
+            "provider": "openai",
+            "config": {
+                "model": self.configs['chat']['name'],
+                "api_key": self.configs['chat']['token'],
+                "openai_base_url": self.configs['chat']['baseUrl'],
+                "temperature": 0.0,
+                "max_tokens": 3000,
+            }
+        }
+
+    def _get_embeddings(self) -> dict[str, any]:
+        return {
+            "provider": "openai",
+            "config": {
+                "model": self.configs['embeddings']['name'],
+                "api_key": self.configs['embeddings']['token'],
+                "openai_base_url": self.configs['embeddings']['baseUrl'],
+            }
+        }
+
+
+m0c = Mem0Configurer(read_config())
 
 
 class Registry:
@@ -139,7 +183,7 @@ class Registry:
         self.vector_cols = {}
         self.sqlite = init_sqlite(configs)
         self.alchemy = init_sqlalchemy(configs)
-        self.saver = init_sqlite_saver(configs, self.sqlite)
+        self.memory = m0c.get_memory()
         logger.info("Registry initialized with all services")
         self.configs = configs
 
@@ -164,6 +208,9 @@ class Registry:
                 self.configs, self.embeddings, collection)
         return self.vector_cols[collection]
 
+    def get_memory(self) -> AsyncMemory:
+        return self.memory
+
     def get_sqlite(self) -> sqlite3.Connection:
         return self.sqlite
 
@@ -171,14 +218,15 @@ class Registry:
         return self.alchemy
 
     def get_session(self) -> Session:
-        Session = sessionmaker(bind=self.alchemy)
+        Session = sessionmaker(bind=self.alchemy, expire_on_commit=False)
         return Session()
 
-    def get_saver(self) -> BaseCheckpointSaver:
-        return self.saver
-    
     def get_webrtc_vad(self):
         return webrtcvad.Vad(1)
+
+    def close(self):
+        self.sqlite.close()
+        self.alchemy.dispose()
 
 
 registry = Registry()
