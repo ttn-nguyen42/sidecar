@@ -83,7 +83,6 @@ class AudioRecorder:
         self.silenced_for = 0
 
     def start(self, device):
-        logger.info("Starting audio recording")
         self.stream = sd.InputStream(
             samplerate=AudioConstants.SAMPLE_RATE,
             channels=AudioConstants.CHANNELS,
@@ -115,6 +114,7 @@ class AudioRecorder:
                         logger.info(
                             "Silence threshold reached, processing queue")
                         self.silenced_for = 0
+                        self._transcribe()
                 self.silenced_for += 1
             else:
                 self.silenced_for = 0
@@ -148,14 +148,13 @@ class AudioRecorder:
         return f16np
 
     def _to_torch(self, f16np: np.ndarray) -> Tensor:
-        """Convert numpy array to torch tensor"""
         return torch.from_numpy(f16np)
 
     def _find_speech(self, audio: Tensor) -> bool:
         timestamps = get_speech_timestamps(
             audio=audio,
             model=self.vad,
-            threshold=AudioConstants.SILENCE_THRESHOLD,
+            threshold=0.5,
             sampling_rate=AudioConstants.SAMPLE_RATE,
         )
         if not timestamps or len(timestamps) == 0:
