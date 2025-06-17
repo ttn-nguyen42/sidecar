@@ -7,13 +7,8 @@ import wave
 from pywhispercpp.constants import WHISPER_SAMPLE_RATE
 from pywhispercpp.model import Segment
 from typing import Callable
-
-from torch import Tensor
-import torch
-
 from setup import Registry
 import sounddevice as sd
-from silero_vad import get_speech_timestamps
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +55,7 @@ def wav_to_np(data: bytes) -> np.ndarray:
 
         raw = wf.readframes(num_frames)
         wf.close()
-        audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
+        audio = np.frombuffer(raw, dtype=np.float16).astype(np.float32)
         if num_channels == 1:
             pcmf32 = audio / 32768.0
         else:
@@ -75,7 +70,7 @@ class AudioRecorder:
         self.on_data = on_data
         self.on_error = on_error
         self.q = queue.Queue()
-        self.vad = registry.get_vad()
+        self.vad = registry.get_webrtc_vad()
         self.model = registry.get_voice()
         self.on_data = on_data
         self.on_error = on_error
@@ -100,12 +95,13 @@ class AudioRecorder:
             self.stream = None
 
     def _callback(self, indata: np.ndarray, frames: int, time, status):
+        # print(indata)
         if status:
             logger.error(f"Audio stream error: {status}")
         try:
             f16np = self._normalize(indata)
-            tensor = self._to_torch(f16np)
-            has_speech = self._find_speech(tensor)
+            b = f16np.tobytes()
+            has_speech = self._find_speech(b)
             if not has_speech:
                 if self.silenced_for >= AudioConstants.SILENCE_THRESHOLD:
                     # Ensure that if user talks too little, or accidental sounds
@@ -143,24 +139,15 @@ class AudioRecorder:
         return self.model.transcribe(media=merged, new_segment_callback=_segcall)
 
     def _normalize(self, raw: np.ndarray) -> np.ndarray:
-        ranged = (raw + 1) / 2  # [-1, 1] to [0, 1]
+        ranged = map(lambda x: (x + 1) / 2, raw)  # [-1, 1] to [0, 1]
         f16np = np.fromiter(ranged, np.float16)
         return f16np
 
-    def _to_torch(self, f16np: np.ndarray) -> Tensor:
-        return torch.from_numpy(f16np)
+    def _find_speech(self, audio: bytes) -> bool:
+        detect = self.vad.is_speech(
+            buf=audio, sample_rate=AudioConstants.SAMPLE_RATE)
 
-    def _find_speech(self, audio: Tensor) -> bool:
-        timestamps = get_speech_timestamps(
-            audio=audio,
-            model=self.vad,
-            threshold=0.5,
-            sampling_rate=AudioConstants.SAMPLE_RATE,
-        )
-        if not timestamps or len(timestamps) == 0:
-            return False
-
-        return True
+        return detect
 
 
 def get_inputs() -> list:

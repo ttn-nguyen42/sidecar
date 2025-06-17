@@ -51,7 +51,7 @@ async def run_state(ws: WebSocket):
         try:
             await ws.send_json(
                 LiveTranscribeResponse(
-                    type="vc_data", data=text).model_dump_json(),
+                    type="vc_data", data=text).model_dump(),
                 mode="text"
             )
         except WebSocketDisconnect:
@@ -61,9 +61,13 @@ async def run_state(ws: WebSocket):
 
     async def on_error(e: Exception):
         logger.error(f"Error in live transcription: {e}")
-        await ws.close(code=1011, reason="Internal server error")
+        try:
+            await ws.close(code=1011, reason="Internal server error")
+        except Exception as e:
+            logger.error(f"Close on error failed: {e}")
 
     cancel_record = None
+
 
     try:
         while True:
@@ -78,7 +82,7 @@ async def run_state(ws: WebSocket):
                         device_id=request.deviceId or 0, on_data=on_data, on_error=on_error)
                     await ws.send_json(
                         LiveTranscribeResponse(
-                            type="vc_start_ok", data="Recording started").model_dump_json(),
+                            type="vc_start_ok", data="Recording started").model_dump(),
                         mode="text"
                     )
                 elif is_stop(request=request):
@@ -92,7 +96,7 @@ async def run_state(ws: WebSocket):
                 break
             except Exception as e:
                 logger.error(e)
-                await ws.send_json(LiveTranscribeResponse(type="vc_stop"))
+                await ws.send_json(LiveTranscribeResponse(type="vc_stop").model_dump())
                 break
     finally:
         logger.debug("Cleaning up WebSocket connection")

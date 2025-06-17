@@ -20,14 +20,14 @@ export interface MenuProps {
 
 const Menu: Component<MenuProps> = (props) => {
     return <div class={styles.menu}>
-        <TbGridDots size={24} />
+        <TbGridDots size={18} />
         <Button
             class={styles.button}
             variant={props.selectedItem === "chat" ? "secondary" : "ghost"}
             onClick={() => props.byItem.chat?.()}
             size="icon"
         >
-            <MessageCircle />
+            <MessageCircle size={18} />
         </Button>
         <Button
             class={styles.button}
@@ -35,7 +35,7 @@ const Menu: Component<MenuProps> = (props) => {
             onClick={() => props.byItem.voice?.()}
             size="icon"
         >
-            <AudioLines />
+            <AudioLines size={18} />
         </Button>
         <Button
             class={styles.button}
@@ -43,7 +43,7 @@ const Menu: Component<MenuProps> = (props) => {
             onClick={() => props.byItem.translate?.()}
             size="icon"
         >
-            <Languages />
+            <Languages size={18} />
         </Button>
         <Button
             class={styles.button}
@@ -51,7 +51,7 @@ const Menu: Component<MenuProps> = (props) => {
             onClick={() => props.byItem.notes?.()}
             size="icon"
         >
-            <NotebookText />
+            <NotebookText size={18} />
         </Button>
         <Button
             class={styles.button}
@@ -59,7 +59,7 @@ const Menu: Component<MenuProps> = (props) => {
             onClick={() => props.byItem.tasks?.()}
             size="icon"
         >
-            <SquareKanban />
+            <SquareKanban size={18} />
         </Button>
         <Button
             class={styles.button}
@@ -67,7 +67,7 @@ const Menu: Component<MenuProps> = (props) => {
             onClick={() => props.byItem.cUse?.()}
             size="icon"
         >
-            <BotMessageSquare />
+            <BotMessageSquare size={18} />
         </Button>
         <Button
             class={styles.button}
@@ -75,7 +75,7 @@ const Menu: Component<MenuProps> = (props) => {
             onClick={() => props.byItem.settings?.()}
             size="icon"
         >
-            <Bolt />
+            <Bolt size={18} />
         </Button>
     </div>;
 };

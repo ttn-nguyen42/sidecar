@@ -1,11 +1,9 @@
 from configparser import ConfigParser
 import logging
 import os
-from typing import Callable
 from langchain_openai import OpenAI, OpenAIEmbeddings, ChatOpenAI
 from pydantic import SecretStr
 from pywhispercpp.model import Model
-from silero_vad import load_silero_vad
 from langchain_chroma import Chroma
 import sqlite3
 from sqlalchemy import create_engine
@@ -16,6 +14,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from config import read_config
 from log import setup_logger
+import webrtcvad
 
 logger = logging.getLogger(__name__)
 
@@ -177,9 +176,9 @@ class Registry:
 
     def get_saver(self) -> BaseCheckpointSaver:
         return self.saver
-
-    def get_vad(self):
-        return load_silero_vad(onnx=True)
+    
+    def get_webrtc_vad(self):
+        return webrtcvad.Vad(1)
 
 
 registry = Registry()

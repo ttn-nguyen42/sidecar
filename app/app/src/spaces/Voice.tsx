@@ -49,18 +49,13 @@ const Voice: Component<VoiceProps> = (props) => {
             setIsConnected(true);
         };
 
-        socket.onmessage = (event: MessageEvent) => {
+        socket.onmessage = async (event: MessageEvent) => {
             const data = JSON.parse(event.data);
-            console.log("Received message:", data);
-            switch (data.type) {
-                case VoiceChatMessageType.VC_DATA:
-                    if (!isConnected()) {
-                        console.warn("Received voice data before connection established");
-                        setIsConnected(true);
-                    }
-                    setTextData(prev => prev + " " + data.text);
-                    break;
-                default:
+            console.log("Message type:", data.type);
+            if (data.type === VoiceChatMessageType.VC_DATA) {
+                setTextData(prev => prev + " " + data.data);
+            } else {
+                console.warn("Unknown message type:", data.type);
             }
         };
 
@@ -81,7 +76,9 @@ const Voice: Component<VoiceProps> = (props) => {
                     setErrorMessage("WebSocket closed with code: " + event.code);
                     alert("WebSocket closed with code: " + event.code);
                 }
+
             }
+            stopRecording();
         };
 
     }
