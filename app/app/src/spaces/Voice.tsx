@@ -5,7 +5,7 @@ import styles from "./voice.module.css";
 import { Speech, AudioLines } from 'lucide-solid'
 import { Expand75, MiddleExpanded } from "@/resize";
 import VoiceHelper from "@/voice";
-import { getWs, packBytes } from "@/socket";
+import { getVoiceChatStartRequest, getWs, VoiceChatMessageType } from "@/socket";
 
 interface VoiceProps {
     setBottomSpaceHeight: (h: number) => void;
@@ -34,19 +34,38 @@ const Voice: Component<VoiceProps> = (props) => {
         setAudioDevices(devices);
     });
 
-    var recorder: any = null;
     var socket: WebSocket = null as any;
-    var id = 0;
 
     const configureSocket = (socket: WebSocket) => {
         socket.onopen = () => {
-            console.log("WebSocket connected");
-            setIsConnected(true);
+            console.log("WebSocket connection established");
+            const startRequest = getVoiceChatStartRequest(selectedDevice());
+            socket.send(JSON.stringify(startRequest));
+            console.log("Sent voice chat start request:", startRequest);
         };
 
         socket.onmessage = (event: MessageEvent) => {
-            const data = JSON.stringify({ 'id': id, 'data': event.data });
-            id += 1;
+            const data = JSON.parse(event.data);
+            console.log("Received message:", data);
+            switch (data.type) {
+                case VoiceChatMessageType.VC_START_OK:
+                    console.log("Voice chat started successfully");
+                    setIsConnected(true);
+                case VoiceChatMessageType.VC_DATA:
+                    if (!isConnected()) {
+                        console.warn("Received voice data before connection established");
+                        setIsConnected(true);
+                    }
+                    if (data.text) {
+                        setTextData(prev => prev + " " + data.text);
+                    } else {
+                        console.warn("Received voice data without text");
+                    }
+                    break;
+                case VoiceChatMessageType.VC_STOP_OK:
+                    console.log("Voice chat stopped successfully");
+                default:
+            }
             setTextData(data);
         };
 
@@ -70,9 +89,6 @@ const Voice: Component<VoiceProps> = (props) => {
     }
 
     const startRecording = async () => {
-        recorder = await VoiceHelper.getRecorder(selectedDevice(), onData);
-        recorder.onerror = onError;
-        recorder.start(2000);
         setIsRecording(true);
         const startTime = Date.now();
 
@@ -90,21 +106,7 @@ const Voice: Component<VoiceProps> = (props) => {
         props.setBodyBackground("transparent");
     };
 
-    const onData = async (blob: Blob) => {
-        const data = await packBytes(id, blob);
-        id += 1;
-        socket.send(data);
-    };
-
-    const onError = (e: any) => {
-        stopRecording();
-        setErrorMessage(e.message);
-    };
-
     const stopRecording = () => {
-        if (recorder) {
-            recorder.stop();
-        }
         if (socket) {
             socket.close();
         }
