@@ -4,8 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import styles from "./voice.module.css";
 import { Speech, AudioLines } from 'lucide-solid'
 import { Expand75, MiddleExpanded } from "@/resize";
-import VoiceHelper from "@/voice";
+import VoiceHelper, { Device } from "@/voice";
 import { getVoiceChatStartRequest, getWs, VoiceChatMessageType } from "@/socket";
+import { Badge } from "@/components/ui/badge";
 
 interface VoiceProps {
     setBottomSpaceHeight: (h: number) => void;
@@ -15,58 +16,52 @@ interface VoiceProps {
 
 const Voice: Component<VoiceProps> = (props) => {
     const [isRecording, setIsRecording] = createSignal(false);
-    const [selectedDevice, setSelectedDevice] = createSignal<string>("");
+    const [selectedDevice, setSelectedDevice] = createSignal<string | null>(null);
     const [isSelectOpen, setIsSelectOpen] = createSignal(false);
-    const [audioDevices, setAudioDevices] = createSignal<MediaDeviceInfo[]>([]);
+    const [audioDevices, setAudioDevices] = createSignal<string[]>([]);
     const [recordingDuration, setRecordingDuration] = createSignal<number>(0);
     const [isConnected, setIsConnected] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal<string>("");
     const [textData, setTextData] = createSignal<string>("");
     const [timeInterval, setTimeInterval] = createSignal<NodeJS.Timeout | null>(null);
 
+    var devices: Device[] = [];
+
     onMount(async () => {
-        const devices = await VoiceHelper.listDevices();
-        if (devices.length > 0) {
-            setSelectedDevice(devices[0].deviceId);
+        devices = await VoiceHelper.listDevices("http://localhost:8768");
+        const deviceList = devices.map(device => device.name);
+        setAudioDevices(deviceList);
+        console.log("Available audio devices:", deviceList);
+        if (deviceList.length > 0) {
+            setSelectedDevice(deviceList[0]);
         } else {
             alert("No audio devices found. Please connect a microphone.");
         }
-        setAudioDevices(devices);
     });
 
     var socket: WebSocket = null as any;
 
     const configureSocket = (socket: WebSocket) => {
         socket.onopen = () => {
-            console.log("WebSocket connection established");
-            const startRequest = getVoiceChatStartRequest(selectedDevice());
+            const device = devices.find(d => d.name === selectedDevice());
+            const startRequest = getVoiceChatStartRequest(device?.index ?? 0);
             socket.send(JSON.stringify(startRequest));
-            console.log("Sent voice chat start request:", startRequest);
+            setIsConnected(true);
         };
 
         socket.onmessage = (event: MessageEvent) => {
             const data = JSON.parse(event.data);
             console.log("Received message:", data);
             switch (data.type) {
-                case VoiceChatMessageType.VC_START_OK:
-                    console.log("Voice chat started successfully");
-                    setIsConnected(true);
                 case VoiceChatMessageType.VC_DATA:
                     if (!isConnected()) {
                         console.warn("Received voice data before connection established");
                         setIsConnected(true);
                     }
-                    if (data.text) {
-                        setTextData(prev => prev + " " + data.text);
-                    } else {
-                        console.warn("Received voice data without text");
-                    }
+                    setTextData(prev => prev + " " + data.text);
                     break;
-                case VoiceChatMessageType.VC_STOP_OK:
-                    console.log("Voice chat stopped successfully");
                 default:
             }
-            setTextData(data);
         };
 
         socket.onerror = (event: Event) => {
@@ -82,14 +77,20 @@ const Voice: Component<VoiceProps> = (props) => {
                 alert(msg);
             } else {
                 console.log("WebSocket closed cleanly:", event);
+                if (event.code !== 1000) {
+                    setErrorMessage("WebSocket closed with code: " + event.code);
+                    alert("WebSocket closed with code: " + event.code);
+                }
             }
-            stopRecording();
         };
 
     }
 
     const startRecording = async () => {
         setIsRecording(true);
+        setErrorMessage("");
+        setTextData("");
+
         const startTime = Date.now();
 
         socket = getWs("ws://localhost:8768/voice/live");
@@ -108,7 +109,7 @@ const Voice: Component<VoiceProps> = (props) => {
 
     const stopRecording = () => {
         if (socket) {
-            socket.close();
+            socket.close(1000, "Recording stopped by user");
         }
 
         const interval = timeInterval();
@@ -165,7 +166,7 @@ const Voice: Component<VoiceProps> = (props) => {
                 size="default"
                 class={`${isRecording() ? styles.stopButton : styles.startButton} flex items-center gap-2 w-24`}
                 onClick={toggleRecording}
-                disabled={audioDevices().length === 0 || selectedDevice() === ""}
+                disabled={audioDevices().length === 0 || selectedDevice() == null}
             >
                 {isRecording() ?
                     <AudioLines size={18} class="animate-pulse" /> :
@@ -174,12 +175,11 @@ const Voice: Component<VoiceProps> = (props) => {
                 {isRecording() ? 'Stop' : 'Start'}
             </Button>
             <Select
-                options={audioDevices().map(device => device.label)}
+                options={audioDevices()}
                 value={selectedDevice()}
                 open={isSelectOpen()}
-                onChange={setSelectedDevice}
+                onChange={(value) => { console.log("Selected device:", value); setSelectedDevice(value); }}
                 onOpenChange={handleSelectOpenChange}
-
                 placeholder="Select Audio Device..."
                 itemComponent={props => (
                     <SelectItem item={props.item}>{props.item.rawValue}</SelectItem>
@@ -190,7 +190,7 @@ const Voice: Component<VoiceProps> = (props) => {
             >
                 <SelectTrigger class={styles.audioSelect}>
                     <SelectValue<string> class={styles.selectValueText}>
-                        {state => state.selectedOption()}
+                        {state => state.selectedOption() ?? "Select Audio Device..."}
                     </SelectValue>
                 </SelectTrigger>
                 <SelectContent class={styles.selectContent} />
@@ -209,7 +209,7 @@ const Voice: Component<VoiceProps> = (props) => {
                     <p>Recording: {formatDuration(recordingDuration())}</p>
                 </div>
                 <div class={styles.connectionStatus}>
-                    {isConnected() ? "Connected" : "Disconnected"}
+                    {isConnected() ? <Badge class="bg-green-600">Connected</Badge> : <Badge class="bg-red-600">Disconnected</Badge>}
                 </div>
             </div>
         )}
@@ -218,8 +218,8 @@ const Voice: Component<VoiceProps> = (props) => {
                 {errorMessage()}
             </div>
         )}
-        {textData() != "" && (
-            <div class={styles.voiceText}>
+        {isRecording() && (
+            <div class={styles.conversation}>
                 <p>{textData()}</p>
             </div>
         )}

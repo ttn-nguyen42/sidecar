@@ -9,7 +9,7 @@ def get_uvicorn_log_config(configs: ConfigParser) -> dict:
     log_level = configs["log"]["level"]
     return {
         'version': 1,
-        'disable_existing_loggers': True,
+        'disable_existing_loggers': False,
         'formatters': {
             'standard': {
                 'format': fmt,

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, UploadFile, WebSocket
+
+from fastapi import APIRouter, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from services.voice import VoiceService
 from setup import registry
@@ -20,42 +21,89 @@ async def transcribe(file: UploadFile):
     return response
 
 
-class LiveTranscribePayload(BaseModel):
-    id: int
-    data: bytes
+@router.get("/devices")
+def getDevices():
+    return service.list_devices()
 
-    @staticmethod
-    def from_bytes(data: bytes) -> 'LiveTranscribePayload':
-        # Read 8 bytes of header, ID (4 bytes) and length (4 bytes)
-        if len(data) < 8:
-            raise ValueError("Data too short to contain ID and length")
-        id = int.from_bytes(data[:4], 'big')
-        length = int.from_bytes(data[4:8], 'big')
-        if len(data) < 8 + length:
-            raise ValueError(
-                f"Data length does not match specified length, {length} bytes expected, {len(data) - 8} bytes received")
-        payload_data = data[8:8 + length]
-        return LiveTranscribePayload(id=id, data=payload_data)
+
+class LiveTranscribeRequest(BaseModel):
+    type: str
+    deviceId: int | None = None
+    timestamp: str
 
 
 class LiveTranscribeResponse(BaseModel):
-    id: int
-    text: str
+    type: str
+    data: str | None = None
 
 
 @router.websocket("/live")
 async def live_transcribe(ws: WebSocket):
+    logger.debug("WebSocket connection initiated")
     await ws.accept()
-    while True:
+    logger.debug("WebSocket connection accepted")
+    await run_state(ws)
+
+
+async def run_state(ws: WebSocket):
+    async def on_data(text: str):
+        logger.debug(f"Transcribed text: {text}")
         try:
-            payload = LiveTranscribePayload.from_bytes(await ws.receive_bytes())
-            data = payload.data
-            logger.info(f"Received ID {payload.id} data size: {len(data)}")
+            await ws.send_json(
+                LiveTranscribeResponse(
+                    type="vc_data", data=text).model_dump_json(),
+                mode="text"
+            )
+        except WebSocketDisconnect:
+            logger.info("WebSocket disconnected during on_data")
+            await ws.close(code=1000, reason="Transcription stopped")
+        return
 
-            # res = await service.transcribe_bytes(data)
-            logger.info(f"Transcription done ID: {payload.id}")
+    async def on_error(e: Exception):
+        logger.error(f"Error in live transcription: {e}")
+        await ws.close(code=1011, reason="Internal server error")
 
-            await ws.send_text(LiveTranscribeResponse(id=payload.id, text="RECEIVED").model_dump_json())
-        except Exception as e:
-            logger.error(f"Error transcribing bytes: {e}")
-            await ws.close(code=1006, reason="Internal server error")
+    cancel_record = None
+
+    try:
+        while True:
+            try:
+                payload = await ws.receive_text()
+                request = LiveTranscribeRequest.model_validate_json(payload)
+                logger.debug(f"Received request: {request}")
+
+                if is_start(request=request):
+                    logger.info("Starting live transcription")
+                    cancel_record = service.start_record(
+                        device_id=request.deviceId or 0, on_data=on_data, on_error=on_error)
+                    await ws.send_json(
+                        LiveTranscribeResponse(
+                            type="vc_start_ok", data="Recording started").model_dump_json(),
+                        mode="text"
+                    )
+                elif is_stop(request=request):
+                    logger.info("Stopping live transcription")
+                    if cancel_record:
+                        await cancel_record()
+                        cancel_record = None
+                    break
+            except WebSocketDisconnect:
+                logger.info("WebSocket disconnected")
+                break
+            except Exception as e:
+                logger.error(e)
+                await ws.send_json(LiveTranscribeResponse(type="vc_stop"))
+                break
+    finally:
+        logger.debug("Cleaning up WebSocket connection")
+        if cancel_record:
+            await cancel_record()
+        logger.info("WebSocket connection closed")
+
+
+def is_start(request: LiveTranscribeRequest) -> bool:
+    return request.type == "vc_start"
+
+
+def is_stop(request: LiveTranscribeRequest) -> bool:
+    return request.type == "vc_stop"

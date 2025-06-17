@@ -2,10 +2,14 @@ declare var MediaStreamRecorder: any;
 
 declare module '@/voice' {
     export interface VoiceHelper {
-        listDevices: () => Promise<MediaDeviceInfo[]>;
+        listDevices: (url: string) => Promise<Device[]>;
         getRecorder: (deviceId: string, onData: (data: Blob) => void) => Promise<any>;
-        getWavWorker: () => Worker;
     }
     const inst: VoiceHelper;
+
+    export interface Device {
+        name: string;
+        index: number;
+    }
     export default inst;
 }

@@ -2,9 +2,10 @@
 .voice {
     display: flex;
     flex-direction: column;
-    gap: 8px;
     height: 100%;
     width: 100%;
+    gap: 8px;
+    padding-bottom: 8px;
 }
 
 /* Voice bar layout */
@@ -12,7 +13,7 @@
     display: flex;
     justify-content: start;
     align-items: center;
-    gap: 8px;
+    gap: 16px;
 }
 
 /* Recording buttons */
@@ -92,4 +93,5 @@
     height: 100%;
     width: 100%;
     background-color: #f0f0f0;
+    padding-bottom: 8px;
 }

@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 import logging
 import os
+from typing import Callable
 from langchain_openai import OpenAI, OpenAIEmbeddings, ChatOpenAI
 from pydantic import SecretStr
 from pywhispercpp.model import Model
@@ -13,7 +14,6 @@ from sqlalchemy import event
 from sqlalchemy.orm import sessionmaker, Session
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.base import BaseCheckpointSaver
-
 from config import read_config
 from log import setup_logger
 
@@ -137,7 +137,6 @@ class Registry:
         self.model = init_model(configs)
         self.embeddings = init_embeddings(configs)
         self.voice = init_whisper_model(configs)
-        self.vad = load_silero_vad()
         self.vector_cols = {}
         self.sqlite = init_sqlite(configs)
         self.alchemy = init_sqlalchemy(configs)
@@ -178,6 +177,9 @@ class Registry:
 
     def get_saver(self) -> BaseCheckpointSaver:
         return self.saver
+
+    def get_vad(self):
+        return load_silero_vad(onnx=True)
 
 
 registry = Registry()

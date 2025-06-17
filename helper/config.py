@@ -2,6 +2,9 @@ import argparse
 import configparser
 import os
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from log import get_logger
 
 logger = get_logger(name=__name__)
@@ -54,3 +57,20 @@ def read_config():
         logger.error(f"Config file {path} not found. Using default values.")
 
     return config
+
+
+def set_cors(app: FastAPI):
+    origins = [
+        "http://localhost",
+        "http://localhost:5173",
+    ]
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    return
