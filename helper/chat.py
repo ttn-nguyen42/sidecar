@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter, HTTPException
-from services.chat import ChatRequest, ChatService, CreateThreadRequest
+from services.chat import ChatRequest, ChatResponse, ChatService, CreateThreadRequest
 from sse_starlette import EventSourceResponse
 from setup import registry
 
@@ -39,12 +39,22 @@ async def delete_thread(id: str):
 async def send(body: ChatRequest):
     try:
         generator = service.send_message(body)
-        return EventSourceResponse(generator)
+        return EventSourceResponse(safe_generator(gen=generator))
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error sending message: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def safe_generator(gen):
+    try:
+        async for item in gen:
+            yield item
+    except ValueError as e:
+        yield ChatResponse(code=400, content=f"Error: {str(e)}")
+    except Exception as e:
+        yield ChatResponse(code=500, content=f"Internal error: {str(e)}")
 
 
 @router.get("/thread/{id}/messages")

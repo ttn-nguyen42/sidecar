@@ -145,36 +145,47 @@ class DocumentIndexer:
             logger.debug("No dirty notes to index")
             return
 
-        self._clean_dirty_notes([note.id for note in notes])
+        vector_ids = []
+        for note in notes:
+            vector_ids.extend(note.vector_ids)
+
+        if len(vector_ids) > 0:
+            self._clean_dirty_notes(vector_ids=vector_ids)
 
         tasks = [self._index_note(note) for note in notes]
         if tasks:
             await asyncio.gather(*tasks)
+
         self._set_completed(notes)
 
     async def _fetch_need_delete_notes(self):
-        ids = []
+        vector_ids = []
+        note_ids = []
 
         with self.registry.get_session() as session:
             notes = session.query(Note) \
-                .filter(Note.is_dirty == True) \
+                .filter(Note.for_removal == True) \
                 .all()
+
             if len(notes) == 0:
                 logger.debug("No dirty notes to delete")
                 return
 
-            ids = [note.id for note in notes]
+            for note in notes:
+                vector_ids.extend(note.vector_ids)
+                note_ids.append(note.id)
 
             session.query(Note) \
-                .filter(Note.id.in_(ids)) \
+                .filter(Note.id.in_(note_ids)) \
                 .delete(synchronize_session=False)
 
             session.commit()
 
-        self._clean_dirty_notes(ids)
+        if len(vector_ids) > 0:
+            self._clean_dirty_notes(vector_ids=vector_ids)
 
-    def _clean_dirty_notes(self, notes: list[Note]):
-        self.vect_store.delete(ids=[note.id for note in notes])
+    def _clean_dirty_notes(self, vector_ids: list[str]):
+        self.vect_store.delete(ids=vector_ids)
 
     def _find_dirty_notes(self):
         with self.registry.get_session() as session:
@@ -183,7 +194,7 @@ class DocumentIndexer:
                 .filter(Note.is_dirty == True) \
                 .all()
 
-    async def _index_note(self, note: Note):
+    async def _index_note(self, note: Note) -> list[str]:
         logger.debug(f"Indexing note {note.id}")
 
         parts = embed_service.split_text(text=note.content)
@@ -195,6 +206,9 @@ class DocumentIndexer:
 
         ids = await self.vect_store.aadd_texts(texts=parts, metadatas=[meta.to_dict()])
         logger.info(f"Indexed note {note.id} with {len(ids)} parts")
+
+        note.vector_ids = ids
+        return ids
 
     async def _delete_notes(self, notes: list[Note]):
         with self.registry.get_session() as session:
@@ -211,6 +225,7 @@ class DocumentIndexer:
         with self.registry.get_session() as session:
             for note in notes:
                 note.is_dirty = False
+                session.add(note)
             session.commit()
 
     def stop(self):

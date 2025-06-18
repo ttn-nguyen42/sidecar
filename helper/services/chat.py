@@ -9,12 +9,14 @@ from sqlalchemy import func, select
 from pydantic import BaseModel
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-import sys
+from services.config import CollectionKey
 from langchain_core.messages import HumanMessage, AIMessage
 from services.prompts import ps
 from util import get_session
 from mem0.memory.main import AsyncMemory
+from services.embed import embed_service
 
+import sys
 sys.path.append("..")
 
 logger = logging.getLogger(__name__)
@@ -52,18 +54,19 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    code: int
     content: str
 
     def __repr__(self):
-        return f"ChatResponse(content={self.content})"
+        return f"ChatResponse(code={self.code}, content={self.content})"
 
     @staticmethod
     def from_history(history: History) -> 'ChatResponse':
-        return ChatResponse(content=history.content)
+        return ChatResponse(code=200, content=history.content)
 
     @staticmethod
     def from_chunk(chunk: AIMessage) -> 'ChatResponse':
-        return ChatResponse(content=chunk.content)
+        return ChatResponse(code=200, content=chunk.content)
 
 
 class MemZeroBridgeRetriever(BaseRetriever):
@@ -147,7 +150,17 @@ class ChatService():
         mem_zero_retriever = MemZeroBridgeRetriever(
             memory=self.memory, limit=20, run_id=run_id)
 
-        vector_memory = await mem_zero_retriever.ainvoke(input=human.content)
+        retriever = self.registry.get_notes_retriever(
+            collection=CollectionKey.NOTES_INDEXED)
+
+        retrievers = [mem_zero_retriever, retriever]
+
+        combined = embed_service.combine_retriever(
+            retrievers,
+            filter=True,
+            reorder=True)
+
+        vector_memory = await combined.ainvoke(input=human.content)
         logger.debug(f"Vector memory: {vector_memory}")
 
         prompts = self._build_prompt(vector_memory, human.content)

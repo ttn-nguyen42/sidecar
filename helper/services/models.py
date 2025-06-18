@@ -3,7 +3,7 @@ import json
 import uuid
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import Case, DateTime, case, func
+from sqlalchemy import JSON, Case, DateTime, case, func
 from datetime import datetime
 from langchain_core.messages import AIMessage
 
@@ -101,6 +101,8 @@ class Note(Base):
         nullable=False, default=True, index=True)
     for_removal: Mapped[bool] = mapped_column(
         nullable=False, default=False, index=True)
+    vector_ids: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=[])
 
     @staticmethod
     def build(title: str, content: str) -> 'Note':
@@ -113,6 +115,7 @@ class Note(Base):
             "content": self.content,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
+            "vector_ids": self.vector_ids,
         }
 
 

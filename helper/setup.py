@@ -15,6 +15,7 @@ from log import setup_logger
 import webrtcvad
 from mem0 import AsyncMemory
 from mem0.configs.base import MemoryConfig
+from langchain_core.vectorstores import VectorStoreRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +216,10 @@ class Registry:
             )
 
         return self.note_vector_by_collection[collection]
+
+    def get_notes_retriever(self, collection: str) -> VectorStoreRetriever:
+        db = self.get_notes_vector_db(collection)
+        return db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
     def get_memory(self) -> AsyncMemory:
         return self.memory
