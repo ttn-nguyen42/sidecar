@@ -1,78 +1,26 @@
 import asyncio
-from datetime import datetime
 import logging
-from fastapi import UploadFile
-from pydantic import BaseModel
-from audio import AudioRecorder, wav_to_np, get_inputs
+from audio import AudioRecorder, get_inputs
+from services.config import ConfigKey, ConfigService
 from setup import Registry
-from pywhispercpp.model import Segment
 from typing import Callable, Awaitable
 
 logger = logging.getLogger(__name__)
 
 
-class TranscribeResponse(BaseModel):
-    text: str
-    duration: float
-
-    def __repr__(self):
-        return f"TranscribeResponse(text={self.text}, duration={self.duration})"
-
 
 class VoiceService():
-    def __init__(self, registry: Registry) -> None:
+    def __init__(self, registry: Registry, config_service: ConfigService) -> None:
         self.registry = registry
-        self.model = registry.get_voice()
+        self.config_service = config_service
         return
-
-    async def transcribe(self, file: UploadFile) -> TranscribeResponse:
-        data = await file.read()
-        np_data = wav_to_np(data)
-
-        start = datetime.now()
-        logger.info(f"Transcribing file: {file.filename}")
-        segments = self.model.transcribe(
-            np_data, new_segment_callback=self._new_segment_callback, print_progress=False)
-        text = ""
-        for s in segments:
-            text += s.text
-        end = datetime.now()
-
-        return TranscribeResponse(text=text, duration=(end - start).total_seconds())
-
-    async def transcribe_bytes(self, data: bytes) -> TranscribeResponse:
-        np_data = wav_to_np(data)
-        logger.info(f"Transcribing bytes: {len(data)}")
-
-        start = datetime.now()
-        segments = self.model.transcribe(
-            np_data, new_segment_callback=self._new_segment_callback, print_progress=False)
-        end = datetime.now()
-        text = ""
-        for s in segments:
-            text += s.text
-        return TranscribeResponse(text=text, duration=(end - start).total_seconds())
-
-    def _new_segment_callback(self, segment: Segment):
-        logger.info(f"New segment: {segment}")
 
     def start_record(self, device_id: int, on_data: Callable[[str], Awaitable[None]], on_error: Callable[[Exception], Awaitable[None]]) -> Callable[[], Awaitable[None]]:
         aqueue = asyncio.Queue()
         on_data_recv = self.sync_on_data(aqueue)
         on_error_recv = self.sync_on_error(aqueue)
 
-        devices = get_inputs()
-        logger.info(f"Using audio input ID: {device_id}")
-
-        ok = False
-        for d in devices:
-            if d['index'] == device_id:
-                ok = True
-                break
-        if not ok:
-            raise Exception("Unknown audio device")
-
-        logger.info(f"Available devices: {devices}")
+        device_id = self._resolve_device_id(device_id)
 
         recorder = AudioRecorder(
             registry=self.registry, on_data=on_data_recv, on_error=on_error_recv)
@@ -85,6 +33,34 @@ class VoiceService():
         cancel = self.canceler(recorder, aqueue, task)
 
         return cancel
+
+    def _resolve_device_id(self, device_id: int | None) -> int:
+        devices = get_inputs()
+        logger.info(f"Using audio input ID: {device_id}")
+
+        if device_id is not None:
+            ok = False
+
+            for d in devices:
+                if d['index'] == device_id:
+                    ok = True
+                    break
+            if not ok:
+                raise Exception("Unknown audio device")
+        else:
+            default_device_name = self.config_service.get(
+                ConfigKey.DEFAULT_AUDIO_DEVICE_NAME)
+
+            for d in devices:
+                if d['name'] == default_device_name:
+                    logger.info(f"Using default audio device: {d['name']}")
+                    return d['index']
+
+            if len(devices) > 0:
+                logger.info(f"Using first audio device: {devices[0]['name']}")
+                return devices[0]['index']
+
+            raise Exception("No audio devices found")
 
     async def consume_queue(self, q: asyncio.Queue, on_data: Callable[[str], Awaitable[None]], on_error: Callable[[Exception], Awaitable[None]]):
         while True:

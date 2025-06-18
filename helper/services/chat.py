@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import logging
 from typing import AsyncGenerator
@@ -6,10 +7,14 @@ from setup import Registry
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 from pydantic import BaseModel
+from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
 import sys
 from langchain_core.messages import HumanMessage, AIMessage
 from services.prompts import ps
 from util import get_session
+from mem0.memory.main import AsyncMemory
+
 sys.path.append("..")
 
 logger = logging.getLogger(__name__)
@@ -28,6 +33,7 @@ class CreateThreadRequest(BaseModel):
 class ChatRequest(BaseModel):
     id: int
     content: str
+    is_voice: bool = False
 
     def __repr__(self):
         return f"ChatRequest(id={self.id}, content={self.content})"
@@ -58,6 +64,45 @@ class ChatResponse(BaseModel):
     @staticmethod
     def from_chunk(chunk: AIMessage) -> 'ChatResponse':
         return ChatResponse(content=chunk.content)
+
+
+class MemZeroBridgeRetriever(BaseRetriever):
+    memory: AsyncMemory
+    limit: int
+    run_id: str
+
+    # Generally discouraged
+    def _get_relevant_documents(self, query: str) -> list[Document]:
+        logger.warning(
+            "MemZeroBridgeRetriever is running in sync mode, this is not recommended")
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # If already in an event loop (e.g., FastAPI with async endpoint calling sync code)
+            # This is tricky: you can't run a new event loop, so you must schedule and wait for the coroutine.
+            # This will block the event loop, so use with caution.
+            future = asyncio.ensure_future(self.memory.search(
+                query=query, limit=self.limit, threshold=0.8, run_id=self.run_id))
+            data = loop.run_until_complete(future)
+        else:
+            # If not in an event loop, safe to run
+            data = asyncio.run(self.memory.search(
+                query=query, limit=self.limit, threshold=0.8))
+
+        results = data.get('results', [])
+        metadata = data.get('metadata', {})
+        return [Document(page_content=r['memory'], metadata=metadata) for r in results]
+
+    async def _aget_relevant_documents(self, query: str) -> list[Document]:
+        data = await self.memory.search(
+            query=query, limit=self.limit, threshold=0.8, run_id=self.run_id)
+        results = data.get('results', [])
+        metadata = data.get('metadata', {})
+        return [Document(page_content=r['memory'], metadata=metadata) for r in results]
 
 
 class ChatService():
@@ -99,7 +144,10 @@ class ChatService():
             session.commit()
 
         human = request.to_human()
-        vector_memory = await self._get_vector_memory(run_id, human.content, limit=5)
+        mem_zero_retriever = MemZeroBridgeRetriever(
+            memory=self.memory, limit=20, run_id=run_id)
+
+        vector_memory = await mem_zero_retriever.ainvoke(input=human.content)
         logger.debug(f"Vector memory: {vector_memory}")
 
         prompts = self._build_prompt(vector_memory, human.content)
@@ -113,13 +161,9 @@ class ChatService():
             yield ChatResponse.from_chunk(chunk)
 
         end = datetime.now()
+        logger.debug(f"Chat response returned after {end - start}ms")
 
         content = "".join([m.content for m in response])
-        prompts.append({"role": "assistant", "content": content})
-        await self._add_memory(run_id, prompts)
-
-        logger.info(
-            f"Chat sent message to thread {request.id}, timestamp: {datetime.now()}, ms: {end - start}")
 
         ai_history = History.build(content, request.id, turn_id)
 
@@ -127,6 +171,19 @@ class ChatService():
             session.add(ai_history)
             self._set_last_updated(session, request.id)
             session.commit()
+
+        asyncio.create_task(self._add_memory(
+            thread_id=request.id, run_id=run_id, prompts=prompts, content=content))
+
+    async def _add_memory(self, thread_id: int, run_id: str, prompts: list[dict[str, any]], content: str):
+        start = datetime.now()
+
+        prompts.append({"role": "assistant", "content": content})
+        await self.memory.add(messages=prompts, run_id=run_id)
+        end = datetime.now()
+
+        logger.debug(
+            f"Memory for thread {thread_id} added after {end - start}ms")
 
     def _set_last_updated(self, session: Session, thread_id: int):
         session.query(Thread) \
@@ -138,25 +195,13 @@ class ChatService():
             .filter(Thread.id == thread_id) \
             .first()
 
-    async def _get_vector_memory(self, run_id: str, content: str, limit: int = 100) -> any:
-        data = await self.memory.search(
-            query=content,
-            run_id=run_id,
-            limit=limit
-        )
-        return data['results']
-
-    async def _add_memory(self, run_id: str, contents: list[any]):
-        result = await self.memory.add(messages=contents, run_id=run_id)
-        logger.debug(f"Memory added: {result}")
-
     def _next_turn_id(self, session: Session, thread_id: int) -> int:
         query = select((func.coalesce(func.max(History.turn_id), 0) + 1)) \
             .where(History.thread_id == thread_id)
 
         return session.execute(query).scalar_one()
 
-    def _build_prompt(self, memory: list[any], content: str) -> list[dict[str, any]]:
+    def _build_prompt(self, memory: list[Document], content: str) -> list[dict[str, any]]:
         sys_prompt = ps.build_chat_system_prompt(memory, content)
         return [
             {"role": "system", "content": sys_prompt},

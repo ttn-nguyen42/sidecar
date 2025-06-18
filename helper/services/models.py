@@ -1,4 +1,5 @@
 import logging
+import json
 import uuid
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column
@@ -57,6 +58,54 @@ class History(Base):
             "thread_id": self.thread_id,
             "turn_id": self.turn_id,
             "role": self.role,
+            "content": self.content,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+class Config(Base):
+    __tablename__ = 'config'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(nullable=False, index=True)
+    value: Mapped[str] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=func.now())
+
+    @staticmethod
+    def build(key: str, value: str) -> 'Config':
+        return Config(key=key, value=value)
+
+    def set_value(self, value: str):
+        self.value = value
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "id": self.id,
+            "key": self.key,
+            "value": self.value,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class Note(Base):
+    __tablename__ = 'notes'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(nullable=False)
+    content: Mapped[str] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now())
+
+    @staticmethod
+    def build(title: str, content: str) -> 'Note':
+        return Note(title=title, content=content)
+
+    def to_dict(self) -> dict[str, any]:
+        return {
+            "id": self.id,
+            "title": self.title,
             "content": self.content,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),

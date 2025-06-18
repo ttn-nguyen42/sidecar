@@ -1,24 +1,14 @@
-
-from fastapi import APIRouter, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from services.voice import VoiceService
 from setup import registry
+from services.config import config_service
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/voice")
-service = VoiceService(registry)
-
-
-@router.post("")
-async def transcribe(file: UploadFile):
-    try:
-        response = await service.transcribe(file)
-    except Exception as e:
-        logger.error(f"Error transcribing file: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    return response
+service = VoiceService(registry, config_service)
 
 
 @router.get("/devices")
@@ -67,7 +57,6 @@ async def run_state(ws: WebSocket):
             logger.error(f"Close on error failed: {e}")
 
     cancel_record = None
-
 
     try:
         while True:
