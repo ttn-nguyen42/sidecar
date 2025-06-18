@@ -74,5 +74,7 @@ class ConfigKey:
     def include(self, key: str) -> bool:
         return key in self.list()
 
+class CollectionKey:
+    NOTES_INDEXED = "notes_indexed"
 
 config_service = ConfigService(registry)

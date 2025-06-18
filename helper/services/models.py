@@ -97,6 +97,10 @@ class Note(Base):
         DateTime, nullable=False, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    is_dirty: Mapped[bool] = mapped_column(
+        nullable=False, default=True, index=True)
+    for_removal: Mapped[bool] = mapped_column(
+        nullable=False, default=False, index=True)
 
     @staticmethod
     def build(title: str, content: str) -> 'Note':

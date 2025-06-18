@@ -38,17 +38,13 @@ async def delete_thread(id: str):
 @router.post("/thread/send")
 async def send(body: ChatRequest):
     try:
-        return EventSourceResponse(service.send_message(body))
+        generator = service.send_message(body)
+        return EventSourceResponse(generator)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error sending message: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/thread/{id}/poll")
-async def poll(id: str):
-    return {"message": f"Polling thread {id}"}
 
 
 @router.get("/thread/{id}/messages")

@@ -33,8 +33,8 @@ def get_default(parser: configparser.ConfigParser):
     parser['sqlite'] = {
         'path': 'DATA/data.db',  # Path to SQLite database
     }
-    parser['vector'] = {
-        'path': 'DATA/vector.db',  # Path to vector database
+    parser['notes'] = {
+        'vector': 'DATA/notes.db',  # Path to notes vector database
     }
     parser['embeddings'] = {
         'name': 'text-embedding-3-small',  # Model name
@@ -42,7 +42,8 @@ def get_default(parser: configparser.ConfigParser):
         'token': os.getenv(key='OPENAI_API_KEY', default=''),
     }
     parser['memory'] = {
-        'path': 'DATA/memory.db',  # Path to memory database
+        'history': 'DATA/memory.db',  # Path to memory database
+        'vector': 'DATA/vector.db',  # Path to vector database
     }
 
 

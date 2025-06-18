@@ -65,11 +65,10 @@ def init_embeddings(configs: ConfigParser) -> OpenAIEmbeddings:
     )
 
 
-def init_vector_db(configs: ConfigParser, embeddings: OpenAIEmbeddings, collection: str) -> Chroma:
-    vector_db_path = configs['vector']['path']
-    logger.info(f"Using vector database at: {vector_db_path}")
+def init_vector_db(configs: ConfigParser, path: str, embeddings: OpenAIEmbeddings, collection: str) -> Chroma:
+    logger.info(f"Using vector database at: {path}")
     return Chroma(
-        persist_directory=vector_db_path,
+        persist_directory=path,
         embedding_function=embeddings,
         collection_name=collection
     )
@@ -121,7 +120,7 @@ def init_sqlalchemy(configs: ConfigParser) -> Engine:
     return engine
 
 
-class Mem0Configurer:
+class MemZeroConfigurer:
     def __init__(self, configs: ConfigParser):
         self.configs = configs
 
@@ -134,7 +133,7 @@ class Mem0Configurer:
             vector_store=self._get_vector_store(),
             llm=self._get_llm(),
             embedder=self._get_embeddings(),
-            history_db_path=self.configs['memory']['path']
+            history_db_path=self.configs['memory']['history']
         )
 
     def _get_vector_store(self) -> dict[str, any]:
@@ -142,7 +141,7 @@ class Mem0Configurer:
             "provider": "chroma",
             "config": {
                 "collection_name": "chat",
-                "path": self.configs['vector']['path']
+                "path": self.configs['memory']['vector']
             }
         }
 
@@ -169,7 +168,11 @@ class Mem0Configurer:
         }
 
 
-m0c = Mem0Configurer(read_config())
+m0c = MemZeroConfigurer(read_config())
+
+
+def init_memory(configs: ConfigParser) -> AsyncMemory:
+    return m0c.get_memory()
 
 
 class Registry:
@@ -180,10 +183,10 @@ class Registry:
         self.model = init_model(configs)
         self.embeddings = init_embeddings(configs)
         self.voice = init_whisper_model(configs)
-        self.vector_cols = {}
+        self.note_vector_by_collection = {}
         self.sqlite = init_sqlite(configs)
         self.alchemy = init_sqlalchemy(configs)
-        self.memory = m0c.get_memory()
+        self.memory = init_memory(configs)
         logger.info("Registry initialized with all services")
         self.configs = configs
 
@@ -202,11 +205,16 @@ class Registry:
     def get_embeddings(self) -> OpenAIEmbeddings:
         return self.embeddings
 
-    def get_vector_db(self, collection: str) -> Chroma:
-        if collection not in self.vector_cols:
-            self.vector_cols[collection] = init_vector_db(
-                self.configs, self.embeddings, collection)
-        return self.vector_cols[collection]
+    def get_notes_vector_db(self, collection: str) -> Chroma:
+        if collection not in self.note_vector_by_collection:
+            self.note_vector_by_collection[collection] = init_vector_db(
+                configs=self.configs,
+                path=self.configs['notes']['vector'],
+                embeddings=self.embeddings,
+                collection=collection
+            )
+
+        return self.note_vector_by_collection[collection]
 
     def get_memory(self) -> AsyncMemory:
         return self.memory

@@ -7,6 +7,8 @@ import voice
 from setup import registry
 import chat
 import helper
+import notes
+from services.notes import DocumentIndexer
 from log import get_uvicorn_log_config
 
 
@@ -19,16 +21,25 @@ if __name__ == "__main__":
     alchemy = registry.get_alchemy()
     models.init_models(alchemy.engine)
     logger.info(f"Starting Sidecar API on port {port}")
+
     app = FastAPI(title="Sidecar API",
                   description="API for Sidecar services",
                   version="1.0.0")
     set_cors(app=app)
+
     app.include_router(chat.router)
     app.include_router(helper.router)
     app.include_router(voice.router)
+    app.include_router(notes.router)
+
+    indexer = DocumentIndexer(registry)
+    indexer.start()
+
     try:
         uvicorn.run(app,
                     port=port,
                     log_config=get_uvicorn_log_config(configs))
     finally:
         registry.close()
+        indexer.stop()
+        logger.info("Sidecar API stopped")
