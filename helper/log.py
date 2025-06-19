@@ -1,45 +1,10 @@
 from configparser import ConfigParser
 import logging
 
+from hypercorn.config import Config
+
 fmt = "%(asctime)s %(levelname)s %(message)s"
 datefmt = "%Y-%m-%d %H:%M:%S"
-
-
-def get_uvicorn_log_config(configs: ConfigParser) -> dict:
-    log_level = configs["log"]["level"]
-    return {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'standard': {
-                'format': fmt,
-                'datefmt': datefmt,
-            },
-            'custom_formatter': {
-                'format': fmt,
-                'datefmt': datefmt,
-            },
-        },
-        'handlers': {
-            'default': {
-                'formatter': 'standard',
-                'class': 'logging.StreamHandler',
-                'stream': 'ext://sys.stdout',  # Default is stderr
-            },
-            'stream_handler': {
-                'formatter': 'custom_formatter',
-                'class': 'logging.StreamHandler',
-                'stream': 'ext://sys.stdout',  # Default is stderr
-            }
-        },
-        'loggers': {
-            'uvicorn': {
-                'handlers': ['default'],
-                'level': log_level,
-                'propagate': False
-            },
-        },
-    }
 
 
 def setup_logger(configs: ConfigParser):
@@ -51,3 +16,11 @@ def setup_logger(configs: ConfigParser):
 
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name=name)
+
+
+def get_hypercorn_config(configs: ConfigParser) -> Config:
+    c = Config()
+    c.bind = f"0.0.0.0:{configs['http'].getint('port', 8768)}"
+    c.accesslog = get_logger("hypercorn.access")
+    c.access_log_format = '%(h)s %(l)s %(l)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+    return c
