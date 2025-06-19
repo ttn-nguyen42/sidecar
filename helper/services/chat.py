@@ -130,63 +130,70 @@ class ChatService():
             return session.query(Thread).all()
 
     async def send_message(self, request: ChatRequest) -> AsyncGenerator[ChatResponse, None]:
-        run_id = 0
+        try:
+            run_id = 0
 
-        with get_session(self.registry) as session:
-            thread = self._get_thread(session, request.id)
-            if thread is None:
-                raise ValueError(f"Thread {request.id} does not exist")
-            logger.debug(f"Thread {request.id} found")
-            run_id = thread.run_id
+            with get_session(self.registry) as session:
+                thread = self._get_thread(session, request.id)
+                if thread is None:
+                    raise ValueError(f"Thread {request.id} does not exist")
+                logger.debug(f"Thread {request.id} found")
+                run_id = thread.run_id
 
-            turn_id = self._next_turn_id(session, request.id)
-            logger.debug(f"Turn ID: {turn_id}")
-            history = request.to_history(request.id, turn_id)
+                turn_id = self._next_turn_id(session, request.id)
+                logger.debug(f"Turn ID: {turn_id}")
+                history = request.to_history(request.id, turn_id)
 
-            session.add(history)
-            session.commit()
+                session.add(history)
+                session.commit()
 
-        human = request.to_human()
-        mem_zero_retriever = MemZeroBridgeRetriever(
-            memory=self.memory, limit=20, run_id=run_id)
+            human = request.to_human()
+            mem_zero_retriever = MemZeroBridgeRetriever(
+                memory=self.memory, limit=20, run_id=run_id)
 
-        retriever = self.registry.get_notes_retriever(
-            collection=CollectionKey.NOTES_INDEXED)
+            retriever = self.registry.get_notes_retriever(
+                collection=CollectionKey.NOTES_INDEXED)
 
-        retrievers = [mem_zero_retriever, retriever]
+            retrievers = [mem_zero_retriever, retriever]
 
-        combined = embed_service.combine_retriever(
-            retrievers,
-            filter=True,
-            reorder=True)
+            combined = embed_service.combine_retriever(
+                retrievers,
+                filter=True,
+                reorder=True)
 
-        vector_memory = await combined.ainvoke(input=human.content)
-        logger.debug(f"Vector memory: {vector_memory}")
+            vector_memory = await combined.ainvoke(input=human.content)
+            logger.debug(f"Vector memory: {vector_memory}")
 
-        prompts = self._build_prompt(vector_memory, human.content)
+            prompts = self._build_prompt(vector_memory, human.content)
 
-        start = datetime.now()
+            start = datetime.now()
 
-        response = []
-        async for chunk in self.chat_model.astream(prompts):
-            logger.debug(f"Chunk: {chunk}")
-            response.append(chunk)
-            yield ChatResponse.from_chunk(chunk)
+            response = []
+            async for chunk in self.chat_model.astream(prompts):
+                logger.debug(f"Chunk: {chunk}")
+                response.append(chunk)
+                yield ChatResponse.from_chunk(chunk)
 
-        end = datetime.now()
-        logger.debug(f"Chat response returned after {end - start}ms")
+            end = datetime.now()
+            logger.debug(f"Chat response returned after {end - start}ms")
 
-        content = "".join([m.content for m in response])
+            content = "".join([m.content for m in response])
 
-        ai_history = History.build(content, request.id, turn_id)
+            ai_history = History.build(content, request.id, turn_id)
 
-        with get_session(self.registry) as session:
-            session.add(ai_history)
-            self._set_last_updated(session, request.id)
-            session.commit()
+            with get_session(self.registry) as session:
+                session.add(ai_history)
+                self._set_last_updated(session, request.id)
+                session.commit()
 
-        asyncio.create_task(self._add_memory(
-            thread_id=request.id, run_id=run_id, prompts=prompts, content=content))
+            asyncio.create_task(self._add_memory(
+                thread_id=request.id, run_id=run_id, prompts=prompts, content=content))
+        except ValueError as e:
+            logger.error(f"ValueError in send_message: {e}")
+            yield ChatResponse(code=404, content=str(e))
+        except Exception as e:
+            logger.error(f"Exception in send_message: {e}")
+            yield ChatResponse(code=500, content="Internal server error.")
 
     async def _add_memory(self, thread_id: int, run_id: str, prompts: list[dict[str, any]], content: str):
         start = datetime.now()

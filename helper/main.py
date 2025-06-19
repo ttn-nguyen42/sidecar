@@ -8,7 +8,8 @@ from setup import registry
 import chat
 import helper
 import notes
-from services.notes import DocumentIndexer
+import kanban
+from services.indexer import DocumentIndexer
 from log import get_uvicorn_log_config
 
 
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     app.include_router(helper.router)
     app.include_router(voice.router)
     app.include_router(notes.router)
+    app.include_router(kanban.router)
 
     indexer = DocumentIndexer(registry)
     indexer.start()
