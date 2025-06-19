@@ -14,17 +14,17 @@ logger = logging.getLogger(__name__)
 class CreateKanbanRequest(BaseModel):
     title: str
     description: str
-    board: KanbanBoards
+    board: str
     due_date: Union[datetime, None]
-    priority: TaskPriority
+    priority: int
 
     def to_model(self) -> Task:
         return Task.build(
             title=self.title,
             description=self.description,
-            board=self.board.value,
+            board=KanbanBoards(self.board).value,
             due_date=self.due_date,
-            priority=self.priority.value,
+            priority=TaskPriority(self.priority).value,
             position=0)
 
 
@@ -32,7 +32,13 @@ class UpdateKanbanRequest(BaseModel):
     title: str
     description: str
     due_date: Union[datetime, None]
-    priority: TaskPriority
+    priority: int
+
+    def update_model(self, task: Task):
+        task.title = self.title
+        task.description = self.description
+        task.due_date = self.due_date
+        task.priority = TaskPriority(self.priority).value
 
 
 class MoveKanbanRequest(BaseModel):
@@ -40,6 +46,9 @@ class MoveKanbanRequest(BaseModel):
     board: KanbanBoards
     before_task_id: Union[int, None]
     after_task_id: Union[int, None]
+
+    def update_model(self, task: Task):
+        task.board = KanbanBoards(self.board).value
 
 
 class KanbanService():
@@ -49,6 +58,8 @@ class KanbanService():
     def create(self, request: CreateKanbanRequest) -> int:
         with self.registry.get_session() as session:
             task = request.to_model()
+            task.is_dirty = True
+
             last_task = self._last_task(session, task.board)
 
             task.insert_between(before=last_task)
@@ -60,25 +71,29 @@ class KanbanService():
     def _get_task(self, session: Session, task_id: int) -> Task:
         return session.query(Task) \
             .filter(Task.id == task_id) \
+            .filter(Task.for_removal == False) \
             .first()
 
-    def _last_task(self, session: Session, board: KanbanBoards) -> Task:
+    def _last_task(self, session: Session, board: str) -> Task:
         return session.query(Task) \
-            .filter(Task.board == board.value) \
+            .filter(Task.board == board) \
+            .filter(Task.for_removal == False) \
             .order_by(Task.position.desc()) \
             .first()
 
-    def _before_task(self, session: Session, board: KanbanBoards, task_id: int) -> Task:
+    def _before_task(self, session: Session, board: str, task_id: int) -> Task:
         return session.query(Task) \
-            .filter(Task.board == board.value) \
+            .filter(Task.board == board) \
             .filter(Task.id < task_id) \
+            .filter(Task.for_removal == False) \
             .order_by(Task.position.desc()) \
             .first()
 
-    def _after_task(self, session: Session, board: KanbanBoards, task_id: int) -> Task:
+    def _after_task(self, session: Session, board: str, task_id: int) -> Task:
         return session.query(Task) \
-            .filter(Task.board == board.value) \
+            .filter(Task.board == board) \
             .filter(Task.id > task_id) \
+            .filter(Task.for_removal == False) \
             .order_by(Task.position.asc()) \
             .first()
 
@@ -88,10 +103,9 @@ class KanbanService():
             if not task:
                 raise ValueError(f"Task {req.task_id} not found")
 
-            task.title = req.title
-            task.description = req.description
-            task.due_date = req.due_date
-            task.priority = req.priority.value
+            req.update_model(task)
+            task.is_dirty = True
+
             session.commit()
 
     def move(self, req: MoveKanbanRequest):
@@ -100,10 +114,12 @@ class KanbanService():
             if not task:
                 raise ValueError(f"Task {req.task_id} not found")
 
-            task.board = req.board.value
+            req.update_model(task)
+
             before = self._before_task(session, req.board, task.id)
             after = self._after_task(session, req.board, task.id)
             task.insert_between(before=before, after=after)
+
             session.commit()
 
     def delete(self, task_id: int):
@@ -113,12 +129,13 @@ class KanbanService():
                 raise ValueError(f"Task {task_id} not found")
 
             self._delete_task(session, task)
+
             session.commit()
 
     def _delete_task(self, session: Session, task_id: int):
         session.query(Task) \
             .filter(Task.id == task_id) \
-            .delete()
+            .update({"for_removal": True})
 
     def list_by_board(self) -> list[Task]:
         boards = [KanbanBoards.TO_DO, KanbanBoards.IN_PROGRESS,
@@ -128,6 +145,54 @@ class KanbanService():
             for board in boards:
                 tasks[board] = session.query(Task) \
                     .filter(Task.board == board.value) \
+                    .filter(Task.for_removal == False) \
                     .order_by(Task.position.asc()) \
                     .all()
         return tasks
+
+
+class TaskMetadata(BaseModel):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    priority: TaskPriority
+    board: KanbanBoards
+    due_date: Union[datetime, None]
+
+    def to_dict(self) -> dict[str, any]:
+        return {
+            "type": "task",
+            "id": self.id,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "priority": self.priority.value,
+            "board": self.board.value,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+        }
+
+    @staticmethod
+    def from_dict(data: dict[str, any]) -> 'TaskMetadata':
+        return TaskMetadata(
+            id=data["id"],
+            created_at=datetime.fromisoformat(data["created_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
+            priority=TaskPriority(data["priority"]),
+            board=KanbanBoards(data["board"]),
+            due_date=datetime.fromisoformat(
+                data["due_date"]) if "due_date" in data and data["due_date"] else None,
+        )
+
+    @staticmethod
+    def from_model(task: Task) -> 'TaskMetadata':
+        return TaskMetadata(
+            id=task.id,
+            created_at=task.created_at,
+            updated_at=task.updated_at,
+            priority=TaskPriority(task.priority),
+            board=KanbanBoards(task.board),
+            due_date=task.due_date,
+        )
+
+    @staticmethod
+    def is_task(data: dict[str, any]) -> bool:
+        return data["type"] == "task"

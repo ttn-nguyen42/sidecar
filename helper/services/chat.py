@@ -151,10 +151,13 @@ class ChatService():
             mem_zero_retriever = MemZeroBridgeRetriever(
                 memory=self.memory, limit=20, run_id=run_id)
 
-            retriever = self.registry.get_notes_retriever(
+            notes = self.registry.get_notes_retriever(
                 collection=CollectionKey.NOTES_INDEXED)
 
-            retrievers = [mem_zero_retriever, retriever]
+            tasks = self.registry.get_tasks_retriever(
+                collection=CollectionKey.TASKS_INDEXED)
+
+            retrievers = [mem_zero_retriever, notes, tasks]
 
             combined = embed_service.combine_retriever(
                 retrievers,
@@ -162,7 +165,7 @@ class ChatService():
                 reorder=True)
 
             vector_memory = await combined.ainvoke(input=human.content)
-            logger.debug(f"Vector memory: {vector_memory}")
+            logger.debug(f"Vector memory count: {len(vector_memory)}")
 
             prompts = self._build_prompt(vector_memory, human.content)
 

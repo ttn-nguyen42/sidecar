@@ -185,6 +185,7 @@ class Registry:
         self.embeddings = init_embeddings(configs)
         self.voice = init_whisper_model(configs)
         self.note_vector_by_collection = {}
+        self.task_vector_by_collection = {}
         self.sqlite = init_sqlite(configs)
         self.alchemy = init_sqlalchemy(configs)
         self.memory = init_memory(configs)
@@ -217,8 +218,23 @@ class Registry:
 
         return self.note_vector_by_collection[collection]
 
+    def get_tasks_vector_db(self, collection: str) -> Chroma:
+        if collection not in self.task_vector_by_collection:
+            self.task_vector_by_collection[collection] = init_vector_db(
+                configs=self.configs,
+                path=self.configs['tasks']['vector'],
+                embeddings=self.embeddings,
+                collection=collection
+            )
+
+        return self.task_vector_by_collection[collection]
+
     def get_notes_retriever(self, collection: str) -> VectorStoreRetriever:
         db = self.get_notes_vector_db(collection)
+        return db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+
+    def get_tasks_retriever(self, collection: str) -> VectorStoreRetriever:
+        db = self.get_tasks_vector_db(collection)
         return db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
     def get_memory(self) -> AsyncMemory:

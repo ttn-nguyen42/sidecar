@@ -146,6 +146,12 @@ class Task(Base):
     priority: Mapped[int] = mapped_column(nullable=False, index=True)
     position: Mapped[int] = mapped_column(
         nullable=False, index=True, default=1000)
+    for_removal: Mapped[bool] = mapped_column(
+        nullable=False, default=False, index=True)
+    vector_ids: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=[])
+    is_dirty: Mapped[bool] = mapped_column(
+        nullable=False, default=False, index=True)
 
     @staticmethod
     def build(title: str,
@@ -159,7 +165,10 @@ class Task(Base):
                     board=board,
                     due_date=due_date,
                     priority=priority,
-                    position=position)
+                    position=position,
+                    for_removal=False,
+                    vector_ids=[],
+                    is_dirty=False)
 
     def to_dict(self) -> dict[str, any]:
         return {

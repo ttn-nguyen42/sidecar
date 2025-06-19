@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from pydantic import BaseModel
 from requests import Session
-from services.models import Note
+from services.models import KanbanBoards, Note, TaskPriority
 from setup import Registry
 
 logger = logging.getLogger(__name__)
@@ -87,14 +87,28 @@ class DocumentMetadata(BaseModel):
 
     def to_dict(self) -> dict[str, any]:
         return {
+            "type": "note",
             "id": self.id,
             "title": self.title,
             "created_at": self.created_at.isoformat(),
         }
 
-    def from_dict(self, data: dict[str, any]) -> 'DocumentMetadata':
+    @staticmethod
+    def from_dict(data: dict[str, any]) -> 'DocumentMetadata':
         return DocumentMetadata(
             id=data["id"],
             title=data["title"],
             created_at=datetime.fromisoformat(data["created_at"]),
         )
+
+    @staticmethod
+    def from_model(note: Note) -> 'DocumentMetadata':
+        return DocumentMetadata(
+            id=note.id,
+            title=note.title,
+            created_at=note.created_at,
+        )
+
+    @staticmethod
+    def is_note(data: dict[str, any]) -> bool:
+        return data["type"] == "note"

@@ -36,6 +36,9 @@ def get_default(parser: configparser.ConfigParser):
     parser['notes'] = {
         'vector': 'DATA/notes.db',  # Path to notes vector database
     }
+    parser['tasks'] = {
+        'vector': 'DATA/tasks.db',  # Path to tasks vector database
+    }
     parser['embeddings'] = {
         'name': 'text-embedding-3-small',  # Model name
         'baseUrl': 'https://api.openai.com/v1',  # Path
