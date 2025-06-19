@@ -111,4 +111,4 @@ class DocumentMetadata(BaseModel):
 
     @staticmethod
     def is_note(data: dict[str, any]) -> bool:
-        return data["type"] == "note"
+        return "type" in data and data["type"] == "note"

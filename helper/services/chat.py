@@ -1,8 +1,8 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
-from typing import AsyncGenerator
-from services.models import History, Thread, new_run_id, role_order
+from typing import AsyncGenerator, Union
+from services.models import History, KanbanBoards, Task, TaskPriority, Thread, new_run_id, role_order
 from setup import Registry
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
@@ -15,6 +15,8 @@ from services.prompts import ps
 from util import get_session
 from mem0.memory.main import AsyncMemory
 from services.embed import embed_service
+from langchain_core.tools import tool
+from services.kanban import CreateKanbanRequest, MoveKanbanRequest, UpdateKanbanRequest, kb_service
 
 import sys
 sys.path.append("..")
@@ -111,8 +113,21 @@ class MemZeroBridgeRetriever(BaseRetriever):
 class ChatService():
     def __init__(self, registry: Registry):
         self.registry = registry
-        self.chat_model = registry.get_chat()
+        self.tool_calls = [
+            get_close_to_due_date_tasks,
+            get_today_tasks,
+            get_tomorrow_tasks,
+            get_this_week_tasks,
+            get_this_month_tasks,
+            move_task_to_board,
+            update_task_priority,
+        ]
+        self.chat_model = registry.get_new_chat(self.tool_calls)
         self.memory = registry.get_memory()
+        self.notes_retriever = registry.get_notes_retriever(
+            collection=CollectionKey.NOTES_INDEXED)
+        self.tasks_retriever = registry.get_tasks_retriever(
+            collection=CollectionKey.TASKS_INDEXED)
 
     def create_thread(self, request: CreateThreadRequest) -> int:
         with get_session(self.registry) as session:
@@ -151,13 +166,8 @@ class ChatService():
             mem_zero_retriever = MemZeroBridgeRetriever(
                 memory=self.memory, limit=20, run_id=run_id)
 
-            notes = self.registry.get_notes_retriever(
-                collection=CollectionKey.NOTES_INDEXED)
-
-            tasks = self.registry.get_tasks_retriever(
-                collection=CollectionKey.TASKS_INDEXED)
-
-            retrievers = [mem_zero_retriever, notes, tasks]
+            retrievers = [mem_zero_retriever,
+                          self.notes_retriever, self.tasks_retriever]
 
             combined = embed_service.combine_retriever(
                 retrievers,
@@ -239,3 +249,165 @@ class ChatService():
                 .offset((page - 1) * limit) \
                 .limit(limit) \
                 .all()
+
+
+@tool
+def get_close_to_due_date_tasks(days: int) -> list[Task]:
+    """
+    Get list of tasks that are due within the next 'days' days.
+
+    Args:
+        days (int): Number of days to look ahead.
+
+    Returns:
+        list[Task]: List of tasks that are due within the next 'days' days.
+    """
+    return kb_service.list_by_duedate_within(days)
+
+
+@tool
+def get_today_tasks() -> list[Task]:
+    """
+    Get list of tasks that are due today.
+
+    Returns:
+        list[Task]: List of tasks that are due today.
+    """
+    return kb_service.list_by_duedate_today()
+
+
+@tool
+def get_tomorrow_tasks() -> list[Task]:
+    """
+    Get list of tasks that are due tomorrow.
+
+    Returns:
+        list[Task]: List of tasks that are due tomorrow.
+    """
+    return kb_service.list_by_duedate_tomorrow()
+
+
+@tool
+def get_this_week_tasks() -> list[Task]:
+    """
+    Get list of tasks that are due this week.
+
+    Returns:
+        list[Task]: List of tasks that are due this week.
+    """
+    return kb_service.list_by_duedate_this_week()
+
+
+@tool
+def get_this_month_tasks() -> list[Task]:
+    """
+    Get list of tasks that are due this month.
+
+    Returns:
+        list[Task]: List of tasks that are due this month.
+    """
+    return kb_service.list_by_duedate_this_month()
+
+
+@tool
+def move_task_to_board(task_id: int, board: str) -> Task:
+    """
+    Move a task to a different board.
+
+    Args:
+        task_id (int): ID of the task to move.
+        board (str): Board to move the task to. It is one of the following:
+            - "to_do"
+            - "in_progress"
+            - "in_review"
+            - "done"
+    """
+    request = MoveKanbanRequest(
+        task_id=task_id,
+        board=board)
+
+    return kb_service.move(request)
+
+
+@tool
+def update_task_priority(task_id: int, priority: int) -> Task:
+    """
+    Update the priority of a task.
+
+    Args:
+        task_id (int): ID of the task to update.
+        priority (int): Priority of the task. It is one of the following:
+            - 1: Low
+            - 2: Medium
+            - 3: High
+            - 4: Urgents
+    """
+    request = UpdateKanbanRequest(
+        task_id=task_id,
+        priority=priority)
+
+    return kb_service.update(request)
+
+
+@tool
+def update_task_due_date(task_id: int, days_from_now: int) -> Task:
+    """
+    Update the due date of a task.
+
+    Args:
+        task_id (int): ID of the task to update.
+        days_from_now (int): Number of days from now to set as the due date.
+    """
+    due_date = datetime.now() + timedelta(days=days_from_now)
+    request = UpdateKanbanRequest(
+        task_id=task_id,
+        due_date=due_date)
+    return kb_service.update(request)
+
+
+@tool
+def create_task(title: str, description: str, days_from_now: Union[int, None], priority: int, board: str) -> Task:
+    """
+    Create a new task.
+
+    Args:
+        title (str): Title of the task.
+        description (str): Description of the task.
+        days_from_now (int): Number of days from now to set as the due date. If None, the task will not have a due date.
+        priority (int): Priority of the task. It is one of the following:
+            - 1: Low
+            - 2: Medium
+            - 3: High
+            - 4: Urgents
+        board (str): Board to create the task on. It is one of the following:
+            - "to_do"
+            - "in_progress"
+            - "in_review"
+            - "done"
+    """
+    due_date = datetime.now() + timedelta(days=days_from_now) if days_from_now else None
+
+    request = CreateKanbanRequest(
+        title=title,
+        description=description,
+        due_date=due_date if due_date else None,
+        priority=priority,
+        board=board)
+
+    return kb_service.create(request)
+
+
+@tool
+def update_task_description(task_id: int, description: str) -> Task:
+    """
+    Update the description of a task.
+
+    Args:
+        task_id (int): ID of the task to update.
+        description (str): New description of the task.
+    """
+    request = UpdateKanbanRequest(
+        task_id=task_id,
+        description=description)
+
+    return kb_service.update(request)

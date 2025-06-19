@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import Union
 
@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from setup import Registry
 from services.models import KanbanBoards, Task, TaskPriority
 from sqlalchemy.orm import Session
+from setup import registry
+from util import end_of_this_week, end_of_this_month, datetime_from
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +152,53 @@ class KanbanService():
                     .all()
         return tasks
 
+    def list_by_duedate_within(self, days: int) -> list[Task]:
+        with self.registry.get_session() as session:
+            return session.query(Task) \
+                .filter(Task.due_date.between(datetime.now(), datetime.now() + timedelta(days=days))) \
+                .filter(Task.for_removal == False) \
+                .order_by(Task.due_date.asc(), Task.priority.desc(), Task.created_at.desc()) \
+                .all()
+
+    def list_by_duedate_today(self) -> list[Task]:
+        end = datetime_from(datetime.now(), days=1)
+
+        with self.registry.get_session() as session:
+            return session.query(Task) \
+                .filter(Task.due_date.between(datetime.now(), end)) \
+                .filter(Task.for_removal == False) \
+                .order_by(Task.due_date.asc(), Task.priority.desc(), Task.created_at.desc()) \
+                .all()
+
+    def list_by_duedate_tomorrow(self) -> list[Task]:
+        end = datetime_from(datetime.now(),  days=1)
+
+        with self.registry.get_session() as session:
+            return session.query(Task) \
+                .filter(Task.due_date.between(datetime.now(), end)) \
+                .filter(Task.for_removal == False) \
+                .order_by(Task.due_date.asc(), Task.priority.desc(), Task.created_at.desc()) \
+                .all()
+
+    def list_by_duedate_this_week(self) -> list[Task]:
+        end = end_of_this_week(datetime.now())
+
+        with self.registry.get_session() as session:
+            return session.query(Task) \
+                .filter(Task.due_date.between(datetime.now(), end)) \
+                .filter(Task.for_removal == False) \
+                .order_by(Task.due_date.asc(), Task.priority.desc(), Task.created_at.desc()) \
+                .all()
+
+    def list_by_duedate_this_month(self) -> list[Task]:
+        end = end_of_this_month(datetime.now())
+
+        with self.registry.get_session() as session:
+            return session.query(Task) \
+                .filter(Task.due_date.between(datetime.now(), end)) \
+                .filter(Task.for_removal == False) \
+
+
 
 class TaskMetadata(BaseModel):
     id: int
@@ -195,4 +244,7 @@ class TaskMetadata(BaseModel):
 
     @staticmethod
     def is_task(data: dict[str, any]) -> bool:
-        return data["type"] == "task"
+        return "type" in data and data["type"] == "task"
+
+
+kb_service = KanbanService(registry)

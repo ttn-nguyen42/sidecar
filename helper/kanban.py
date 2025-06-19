@@ -1,10 +1,9 @@
 import logging
 from fastapi import APIRouter, HTTPException
-from services.kanban import CreateKanbanRequest, KanbanService, MoveKanbanRequest, UpdateKanbanRequest
-from setup import registry
+from services.kanban import CreateKanbanRequest, MoveKanbanRequest, UpdateKanbanRequest
+from services.kanban import kb_service as service
 
 router = APIRouter(prefix="/kanban")
-service = KanbanService(registry)
 
 logger = logging.getLogger(__name__)
 

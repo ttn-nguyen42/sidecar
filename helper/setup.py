@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 import logging
 import os
+from typing import Callable
 from langchain_openai import OpenAI, OpenAIEmbeddings, ChatOpenAI
 from pydantic import SecretStr
 from pywhispercpp.model import Model
@@ -31,16 +32,19 @@ def init_model(configs: ConfigParser) -> OpenAI:
         max_retries=3)
 
 
-def init_chat_model(configs: ConfigParser) -> ChatOpenAI:
+def init_chat_model(configs: ConfigParser, tools: list[any] = []) -> ChatOpenAI:
     chat_model = configs['chat']['name']
     logger.info(f"Using chat model: {chat_model}")
-    return ChatOpenAI(
+    m = ChatOpenAI(
         api_key=SecretStr(configs['chat']['token']),
         base_url=configs['chat']['baseUrl'],
         model=chat_model,
         temperature=0.0,
-        max_retries=3
+        max_retries=3,
     )
+    if len(tools) > 0:
+        m.bind_tools(tools)
+    return m
 
 
 def init_whisper_model(configs: ConfigParser) -> Model:
@@ -197,6 +201,9 @@ class Registry:
 
     def get_chat(self) -> ChatOpenAI:
         return self.chat
+
+    def get_new_chat(self, tools: list[any] = []) -> ChatOpenAI:
+        return init_chat_model(self.configs, tools)
 
     def get_voice(self) -> Model:
         return self.voice
