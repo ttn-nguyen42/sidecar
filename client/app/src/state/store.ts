@@ -1,9 +1,22 @@
-import { configureStore, type Action, type ThunkAction } from "@reduxjs/toolkit";
+import { create } from "zustand";
+import { ViewHeight, ViewWidth } from "./const";
 
-export const store = configureStore({
-  reducer: {},
-});
+type ViewStateStore = {
+  height: number;
+  width: number;
+  setHeight: (height: number) => void;
+  setWidth: (width: number) => void;
+};
 
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-export type AppThunk = ThunkAction<void, RootState, unknown, Action<string>>;
+const useViewStore = create<ViewStateStore>((set) => ({
+  height: ViewHeight.MENU,
+  width: ViewWidth.FULL_WIDTH,
+  setHeight: (height: number) => {
+    set({ height });
+  },
+  setWidth: (width: number) => {
+    set({ width });
+  },
+}));
+
+export { useViewStore };

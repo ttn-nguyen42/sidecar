@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain } from "electron/main";
+import { app, BrowserWindow, ipcMain } from "electron/main";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 
