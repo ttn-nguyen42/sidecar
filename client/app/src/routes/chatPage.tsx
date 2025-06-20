@@ -11,7 +11,6 @@ const ChatPage = () => {
     }
 
     return <div
-        className={`${style.chat} opacity-100 transition-opacity duration-${AnimationDuration.DEFAULT}`}
         style={{ height: ChatDimensions.height, width: ChatDimensions.width }}>
         <div>
             <h1>Chat</h1>
