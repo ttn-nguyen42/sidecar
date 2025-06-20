@@ -29,7 +29,6 @@ const createWindow = () => {
 
   if (isDev) {
     win.loadURL("http://localhost:5173");
-    win.webContents.openDevTools();
   } else {
     win.loadFile(path.join(__dirname, "../../solidjs_dist/index.html"));
   }

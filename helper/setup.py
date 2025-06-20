@@ -1,7 +1,7 @@
 from configparser import ConfigParser
 import logging
 import os
-from typing import Callable
+from browser_use import Agent
 from langchain_openai import OpenAI, OpenAIEmbeddings, ChatOpenAI
 from pydantic import SecretStr
 from pywhispercpp.model import Model
@@ -259,6 +259,11 @@ class Registry:
 
     def get_webrtc_vad(self):
         return webrtcvad.Vad(1)
+
+    def get_web_agent(self, task: str):
+        return Agent(
+            task=task,
+            llm=self.model)
 
     def close(self):
         self.sqlite.close()
