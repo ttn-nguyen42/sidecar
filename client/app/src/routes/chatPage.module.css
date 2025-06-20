@@ -1,3 +1,4 @@
 chat {
   overflow: hidden;
+  -webkit-app-region: drag;
 }
