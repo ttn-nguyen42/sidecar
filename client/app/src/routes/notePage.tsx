@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import style from "./notePage.module.css";
 import DAFKeepAlive from "../state/DAFKeepAlive";
 
 const NotePage = () => {
-    return <div className={style.notePage}>NotePage</div>;
+    return <div className={style.notePage}>
+        <button><Link to="/">Menu</Link></button>
+    </div>;
 };
 
 export const Route = createFileRoute('/notePage')({

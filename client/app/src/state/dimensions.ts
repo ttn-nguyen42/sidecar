@@ -1,4 +1,4 @@
-import { ViewHeight, ViewWidth } from "../state/const";
+import { ViewHeight, ViewWidth } from "./const";
 
 const MenuDimensions = {
   width: ViewWidth.FULL_WIDTH,
