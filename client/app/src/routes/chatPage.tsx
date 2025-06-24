@@ -1,17 +1,16 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import style from './chatPage.module.css';
-import { ChatDimensions, MenuDimensions } from '../state/dimensions';
+import { ChatDimensions } from '../state/dimensions';
 import DAFKeepAlive from '../state/DAFKeepAlive';
-import { resizeTo } from '../state/view';
 import { ChatMessageList } from '../components/ui/chat/chat-message-list';
 import { ChatBubble, ChatBubbleAction, ChatBubbleActionWrapper, ChatBubbleMessage } from '../components/ui/chat/chat-bubble';
 import { ChatInput } from '../components/ui/chat/chat-input';
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, useSidebar } from '../components/ui/sidebar';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Copy, CornerDownLeft, ListTodo, Mic, MoreVertical, Notebook, Settings, Info, Pencil, Trash } from 'lucide-react';
+import { Copy, CornerDownLeft, ListTodo, Mic, Notebook, Settings, Info, Pencil, Trash } from 'lucide-react';
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from '../components/ui/context-menu';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../components/ui/context-menu';
 import {
     Dialog,
     DialogContent,
@@ -20,33 +19,26 @@ import {
     DialogTitle,
 } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
+import TopBar from '../components/atomic/TopBar';
 
 const ChatPage = () => {
-    const location = useRouter();
-
-    const toMenu = () => {
-        resizeTo(MenuDimensions.width, MenuDimensions.height)
-        location.history.back();
-    }
-
 
     return <SidebarProvider>
         <ChatSidebar />
         <div
             className={style.chat + " relative " + style.noDrag + " flex flex-col overflow-hidden"}
             style={{ height: ChatDimensions.height, width: ChatDimensions.width }}>
-            <div className={`flex items-center justify-between border-b border-gray-200 p-2 ${style.dragArea}`} style={{ height: '10%' }}>
-                <div className='flex justify-start items-center gap-2'>
-                    <Button size={'icon'} variant={'ghost'} onClick={toMenu} className='size-8'>
-                        <ArrowLeft onClick={toMenu} />
-                    </Button>
+            <TopBar left={
+                <>
                     <h1>Chat Title Here</h1>
-                </div>
-                <div className='flex justify-end items-center gap-2'>
+                </>
+            } right={
+                <>
                     <p className='text-sm text-gray-500'>Started 3 days ago</p>
                     <SidebarTrigger className="size-8" />
-                </div>
-            </div>
+                </>
+            }>
+            </TopBar>
             <ChatMessageList className={style.noDrag + " flex-1"} style={{ width: '100%', height: '90%' }}>
                 <WideChatBubble variant='sent' layout='default'>
                     <ChatBubbleMessage>

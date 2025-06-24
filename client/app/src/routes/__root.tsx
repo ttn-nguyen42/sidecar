@@ -3,6 +3,7 @@ import { AliveScope } from "react-activation";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { forwardRef, useContext, useRef } from "react";
 import { cloneDeep } from "lodash";
+import { LastRouteProvider } from "../lib/LastRouteProvider";
 
 const Root = () => {
     const matches = useMatches();
@@ -12,11 +13,13 @@ const Root = () => {
 
     return (
         <main>
-            <AliveScope>
-                <AnimatePresence mode="wait">
-                    <AnimatedOutlet key={nextMatch.id} />
-                </AnimatePresence>
-            </AliveScope>
+            <LastRouteProvider>
+                <AliveScope>
+                    <AnimatePresence mode="wait">
+                        <AnimatedOutlet key={nextMatch.id} />
+                    </AnimatePresence>
+                </AliveScope>
+            </LastRouteProvider>
         </main>
     );
 };

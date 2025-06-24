@@ -10,4 +10,9 @@ const ChatDimensions = {
   height: ViewHeight.FULL_EXPANDED,
 };
 
-export { MenuDimensions, ChatDimensions };
+const TaskBoardDimensions = {
+  width: ViewWidth.FULL_WIDTH,
+  height: ViewHeight.FULL_EXPANDED,
+};
+
+export { MenuDimensions, ChatDimensions, TaskBoardDimensions };
