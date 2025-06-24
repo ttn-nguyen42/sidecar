@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import style from './chatPage.module.css';
-import { ChatDimensions } from '../state/dimensions';
+import { ChatDimensions, NoteDimensions, TaskBoardDimensions } from '../state/dimensions';
 import DAFKeepAlive from '../state/DAFKeepAlive';
 import { ChatMessageList } from '../components/ui/chat/chat-message-list';
 import { ChatBubble, ChatBubbleAction, ChatBubbleActionWrapper, ChatBubbleMessage } from '../components/ui/chat/chat-bubble';
@@ -20,9 +20,10 @@ import {
 } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import TopBar from '../components/atomic/TopBar';
+import { resizeTo } from '../state/view';
+import { SettingsDimensions } from '../state/dimensions';
 
 const ChatPage = () => {
-
     return <SidebarProvider>
         <ChatSidebar />
         <div
@@ -37,8 +38,7 @@ const ChatPage = () => {
                     <p className='text-sm text-gray-500'>Started 3 days ago</p>
                     <SidebarTrigger className="size-8" />
                 </>
-            }>
-            </TopBar>
+            } style={{ height: '10%' }} />
             <ChatMessageList className={style.noDrag + " flex-1"} style={{ width: '100%', height: '90%' }}>
                 <WideChatBubble variant='sent' layout='default'>
                     <ChatBubbleMessage>
@@ -138,6 +138,7 @@ export const Route = createFileRoute('/chatPage')({
 
 const ChatSidebar = () => {
     const { setOpen, setOpenMobile, isMobile } = useSidebar();
+
     const handleCloseSidebar = () => {
         if (isMobile) {
             setOpenMobile(false);
@@ -145,6 +146,22 @@ const ChatSidebar = () => {
             setOpen(false);
         }
     };
+
+    const toNotePage = () => {
+        handleCloseSidebar();
+        resizeTo(NoteDimensions.width, NoteDimensions.height)
+    }
+
+    const toTaskBoardPage = () => {
+        handleCloseSidebar();
+        resizeTo(TaskBoardDimensions.width, TaskBoardDimensions.height)
+    }
+
+    const toSettingsPage = () => {
+        handleCloseSidebar();
+        resizeTo(SettingsDimensions.width, SettingsDimensions.height)
+    }
+
     return <Sidebar>
         <SidebarHeader>
         </SidebarHeader>
@@ -154,24 +171,24 @@ const ChatSidebar = () => {
                 <SidebarGroupContent>
                     <SidebarMenu>
                         <SidebarMenuItem key={'/notePage'}>
-                            <SidebarMenuButton asChild onClick={handleCloseSidebar}>
-                                <Link to='/notePage'>
+                            <SidebarMenuButton asChild>
+                                <Link to='/notePage' onClick={toNotePage}>
                                     <Notebook />
                                     <span>Notes</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem key={'/taskBoard'}>
-                            <SidebarMenuButton asChild onClick={handleCloseSidebar}>
-                                <Link to='/taskBoardPage'>
+                            <SidebarMenuButton asChild>
+                                <Link to='/taskBoardPage' onClick={toTaskBoardPage}>
                                     <ListTodo />
                                     <span>Task Board</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                         <SidebarMenuItem key={'/settingsPage'}>
-                            <SidebarMenuButton asChild onClick={handleCloseSidebar}>
-                                <Link to='/settingsPage'>
+                            <SidebarMenuButton asChild>
+                                <Link to='/settingsPage' onClick={toSettingsPage}>
                                     <Settings />
                                     <span>Settings</span>
                                 </Link>
@@ -221,13 +238,11 @@ function ThreadsList() {
         }
     };
 
-    // Helper to open dialog
     const openDialog = (type: 'rename' | 'delete' | 'details', thread: typeof mockThreads[0]) => {
         setDialog({ type, thread });
         if (type === 'rename') setRenameValue(thread.name);
     };
 
-    // Dialog close handler
     const closeDialog = () => setDialog(null);
 
     return (
@@ -259,7 +274,6 @@ function ThreadsList() {
                 ))}
             </div>
 
-            {/* Rename Dialog */}
             <Dialog open={!!dialog && dialog.type === 'rename'} onOpenChange={closeDialog}>
                 <DialogContent className="max-w-xs">
                     <DialogHeader>
@@ -278,7 +292,7 @@ function ThreadsList() {
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Dialog */}
+
             <Dialog open={!!dialog && dialog.type === 'delete'} onOpenChange={closeDialog}>
                 <DialogContent className="py-4 max-w-sm">
                     <DialogHeader className="mb-2">
@@ -291,7 +305,6 @@ function ThreadsList() {
                 </DialogContent>
             </Dialog>
 
-            {/* Details Dialog */}
             <Dialog open={!!dialog && dialog.type === 'details'} onOpenChange={closeDialog}>
                 <DialogContent>
                     <DialogHeader>

@@ -10,11 +10,11 @@ const MenuPage = () => {
     const [counter, setCounter] = useState(0);
 
     const toChat = () => {
-        resizeTo(ChatDimensions.height, ChatDimensions.width)
+        resizeTo(ChatDimensions.width, ChatDimensions.height)
     }
 
     const toTaskBoard = () => {
-        resizeTo(TaskBoardDimensions.height, TaskBoardDimensions.width)
+        resizeTo(TaskBoardDimensions.width, TaskBoardDimensions.height)
     }
 
     return <div

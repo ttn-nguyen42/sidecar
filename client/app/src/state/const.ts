@@ -8,6 +8,7 @@ const ViewHeight = {
 
 const ViewWidth = {
   FULL_WIDTH: 480,
+  EXTENDED: 640,
 };
 
 const AnimationDuration = {

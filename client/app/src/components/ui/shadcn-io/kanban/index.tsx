@@ -31,6 +31,7 @@ export type KanbanBoardProps = {
   id: Status['id'];
   children: ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 };
 
 export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
@@ -74,7 +75,7 @@ export const KanbanCard = ({
   return (
     <Card
       className={cn(
-        'rounded-md p-3 shadow-sm',
+        'rounded-md p-2 shadow-sm',
         isDragging && 'cursor-grabbing',
         className
       )}
@@ -128,16 +129,19 @@ export type KanbanProviderProps = {
   children: ReactNode;
   onDragEnd: (event: DragEndEvent) => void;
   className?: string;
+  style?: React.CSSProperties;
 };
 
 export const KanbanProvider = ({
   children,
   onDragEnd,
   className,
+  style,
 }: KanbanProviderProps) => (
   <DndContext collisionDetection={rectIntersection} onDragEnd={onDragEnd}>
     <div
       className={cn('grid w-full auto-cols-fr grid-flow-col gap-4', className)}
+      style={style}
     >
       {children}
     </div>
