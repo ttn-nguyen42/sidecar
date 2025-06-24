@@ -11,4 +11,5 @@ button {
 
 .kanban {
   -webkit-app-region: no-drag;
+  min-height: 100%;
 }

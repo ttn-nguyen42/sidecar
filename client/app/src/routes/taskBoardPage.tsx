@@ -5,7 +5,7 @@ import TopBar from '../components/atomic/TopBar';
 import { Badge } from '../components/ui/badge';
 import { KanbanBoard, KanbanCard, KanbanCards, KanbanHeader, KanbanProvider, type DragEndEvent } from '../components/ui/shadcn-io/kanban';
 import { startOfMonth, subMonths, subDays, endOfMonth, format } from 'date-fns';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const today = new Date();
 
