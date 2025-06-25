@@ -7,9 +7,12 @@ import {
   rectIntersection,
   useDraggable,
   useDroppable,
+  useSensor,
+  useSensors,
 } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { ReactNode } from 'react';
+import { MouseSensor, TouchSensor } from './SmartPointerSensor';
 
 export type { DragEndEvent } from '@dnd-kit/core';
 
@@ -104,13 +107,13 @@ export const KanbanCards = ({ children, className }: KanbanCardsProps) => (
 
 export type KanbanHeaderProps =
   | {
-      children: ReactNode;
-    }
+    children: ReactNode;
+  }
   | {
-      name: Status['name'];
-      color: Status['color'];
-      className?: string;
-    };
+    name: Status['name'];
+    color: Status['color'];
+    className?: string;
+  };
 
 export const KanbanHeader = (props: KanbanHeaderProps) =>
   'children' in props ? (
@@ -137,13 +140,18 @@ export const KanbanProvider = ({
   onDragEnd,
   className,
   style,
-}: KanbanProviderProps) => (
-  <DndContext collisionDetection={rectIntersection} onDragEnd={onDragEnd}>
+}: KanbanProviderProps) => {
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor)
+  )
+
+  return <DndContext sensors={sensors} collisionDetection={rectIntersection} onDragEnd={onDragEnd} >
     <div
       className={cn('grid w-full auto-cols-fr grid-flow-col gap-4', className)}
       style={style}
     >
       {children}
     </div>
-  </DndContext>
-);
+  </DndContext >
+}
